@@ -19,6 +19,8 @@ REDSHIFT = 0.2666
 FIG_WIDTH = 8
 FONTSIZE = 10
 
+FITTYPE = "bb"
+
 data_dir = "data"
 plot_dir = "plots"
 lc_dir = os.path.join(data_dir, "lightcurves")
@@ -36,8 +38,11 @@ filter_wl = utilities.load_info_json("filter_wl")
 def fit_sed(mags, **kwargs):
     """ """
     fit = FitSpectrum(mags, REDSHIFT)
-    fitresult = fit.fit_powerlaw()
-
+    if FITTYPE == "bb":
+        fitresult = fit.fit_blackbody(**kwargs)
+    if FITTYPE == "powerlaw":
+        fitresult = fit.fit_powerlaw(**kwargs)
+    
     return fitresult
 
 def get_mean_magnitudes(bins=30):
@@ -71,7 +76,7 @@ def get_mean_magnitudes(bins=30):
     return slices
 
 
-def fit_slices(nslices=30):
+def fit_slices(nslices=30, **kwargs):
     """" """
     print(f"Fitting {nslices} time slices.\n")
     mean_mags = get_mean_magnitudes(nslices+1)
@@ -80,13 +85,13 @@ def fit_slices(nslices=30):
     progress_bar = ProgressBar(len(mean_mags))
     for index, entry in enumerate(mean_mags):
         if len(mean_mags[entry]) > 2:
-            result = fit_sed(mean_mags[entry])
+            result = fit_sed(mean_mags[entry], **kwargs)
             fitparams.update({i: result})
             i+=1
         progress_bar.update(index)
     progress_bar.update(len(mean_mags))
 
-    with open(os.path.join(fit_dir, "powerlaw.json"), "w") as outfile:
+    with open(os.path.join(fit_dir, f"{FITTYPE}.json"), "w") as outfile:
         json.dump(fitparams, outfile)
 
 def plot_lightcurve(fitparams, alpha=None):
@@ -131,7 +136,7 @@ def plot_lightcurve(fitparams, alpha=None):
         spline.set_smoothing_factor(0.001) 
         ax1.plot(df_model_band.mjd.values, spline(df_model_band.mjd.values), color=cmap[key]) 
 
-    plt.savefig(f"plots/lightcurve_powerlaw.png")
+    plt.savefig(f"plots/lightcurve_{FITTYPE}.png")
     plt.close()
 
 def plot_luminosity(fitparams):
@@ -149,15 +154,15 @@ def plot_luminosity(fitparams):
     ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
     ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
     ax1.legend()
-    plt.savefig("plots/luminosity_powerlaw.png")
+    plt.savefig(f"plots/luminosity_{FITTYPE}.png")
     plt.close()
 
 def load_fitparams():
-    with open(os.path.join(fit_dir, "powerlaw.json")) as json_file:
+    with open(os.path.join(fit_dir, f"{FITTYPE}.json")) as json_file:
         fitparams = json.load(json_file)
     return fitparams
 
-fit_slices(29)
+fit_slices(29, extinction_av=1.7, extinction_rv=3.1)
 fitparams = load_fitparams()
-plot_lightcurve(fitparams)
+# plot_lightcurve(fitparams)
 plot_luminosity(fitparams)

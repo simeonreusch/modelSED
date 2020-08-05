@@ -36,6 +36,12 @@ def nu_to_lambda(nu):
         lambda_value = const.c.value/(nu*1E-10)# Angstrom
     return lambda_value
 
+def flux_nu_to_lambda(fluxnu, wav):
+    return np.asarray(fluxnu) * 2.99792458E18 / np.asarray(wav)**2 * FLAM
+
+def flux_lambda_to_nu(fluxlambda, wav):
+    return np.asarray(fluxlambda) * 3.33564095E-19 * np.asarray(wav)**2 * FNU
+
 def magnitude_in_band(band, spectrum):
     """ """
     bandpassfiles = load_info_json("bandpassfiles")
@@ -78,6 +84,11 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
     flux = np.trapz(cut_flux, cut_freq) *u.erg / u.cm**2 / u.s
     luminosity = flux * 4 * np.pi * d**2
     return luminosity
+
+def get_wavelengths_and_frequencies():
+    wavelengths = np.arange(1000, 60000, 10) * u.AA
+    frequencies = const.c.value/(wavelengths.value*1E-10) * u.Hz
+    return wavelengths, frequencies
 
 def load_info_json(filename):
     with open(os.path.join(INSTRUMENT_DATA_DIR, f"{filename}.json")) as json_file:
