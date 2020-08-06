@@ -82,19 +82,17 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
 
     masked_wl = np.ma.masked_outside(full_wavelength, wl_min, wl_max)
     mask = np.ma.getmask(masked_wl)
+
     cut_wl = np.ma.compressed(masked_wl) * u.AA
     cut_flux = np.ma.compressed(np.ma.masked_where(mask, full_flux))
+    cut_freq = const.c.value / (cut_wl * 1e-10) * u.Hz
 
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.cm)
-    # wl = np.arange(wl_min, wl_max, 10) * u.AA
-    # freq = np.flip(const.c.value/(wl.value*1E-10) * u.Hz)
-    # powerlaw = freq**alpha *u.erg / u.cm**2 / u.s * scale
-    # spectrum = sncosmo_spectral_v13.Spectrum(wave=wl, flux=powerlaw, unit=FNU)
-    # flux = np.trapz(spectrum._flux, freq.value) *u.erg / u.cm**2 / u.s
-    cut_freq = np.flip(const.c.value / (cut_wl.value * 1e-10) * u.Hz)
+
     flux = np.trapz(cut_flux, cut_freq) * u.erg / u.cm ** 2 / u.s
-    luminosity = flux * 4 * np.pi * d ** 2
+    luminosity = np.abs(flux * 4 * np.pi * d ** 2)
+
     return luminosity
 
 

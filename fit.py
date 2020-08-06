@@ -27,13 +27,17 @@ class FitSpectrum:
         self.wavelengths = np.arange(1000, 60000, 10) * u.AA
         self.frequencies = const.c.value / (self.wavelengths.value * 1e-10) * u.Hz
 
-    def fit_powerlaw(self, **kwargs):
+    def fit_powerlaw(self, bands_to_fit: list = None, **kwargs):
         """ """
         # magnitudes_outdict = {}
         flux_observed = []
         flux_err_observed = []
         freq = []
         wl_observed = []
+
+        # if bands_to_fit is None:
+        #     bands_to_fit = []
+        #     for
 
         for key in self.magnitudes.keys():
             if key != "mjd":
@@ -71,6 +75,7 @@ class FitSpectrum:
         spectrum = sncosmo_spectral_v13.Spectrum(
             wave=self.wavelengths, flux=powerlaw_nu, unit=utilities.FNU
         )
+        # print(spectrum._flux)
 
         spectrum_evaluated = self._evaluate_spectrum(spectrum, self.magnitudes)
 
@@ -89,15 +94,15 @@ class FitSpectrum:
 
         luminosity_uv_optical = utilities.calculate_luminosity(
             spectrum,
-            self.filter_wl["Swift_UVW2"],
-            self.filter_wl["P48+ZTF_i"],
-            self.redshift,
+            wl_min=self.filter_wl["Swift_UVW2"],
+            wl_max=self.filter_wl["P48+ZTF_i"],
+            redshift=self.redshift,
         )
         luminosity_uv_nir = utilities.calculate_luminosity(
             spectrum,
-            self.filter_wl["Swift_UVW2"],
-            self.filter_wl["P200_Ks"],
-            self.redshift,
+            wl_min=self.filter_wl["Swift_UVW2"],
+            wl_max=self.filter_wl["P200_Ks"],
+            redshift=self.redshift,
         )
 
         return {
