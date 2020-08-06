@@ -137,8 +137,7 @@ class FitSpectrum():
         luminosity_uv_optical = utilities.calculate_luminosity(spectrum, self.filter_wl["Swift_UVW2"], self.filter_wl["P48+ZTF_i"], self.redshift)
         luminosity_uv_nir = utilities.calculate_luminosity(spectrum, self.filter_wl["Swift_UVW2"], self.filter_wl["P200_Ks"], self.redshift)
 
-        return {"temperature": parameters["temp"], "scale": parameters["scale"], "mjd": self.magnitudes["mjd"],"red_chisq": reduced_chisquare, "luminosity_uv_optical": luminosity_uv_optical.value, "luminosity_uv_nir": luminosity_uv_nir.value}
-
+        return {"temperature": parameters["temp"], "scale": parameters["scale"], "extinction_av": extinction_av,"extinction_rv": extinction_rv, "mjd": self.magnitudes["mjd"],"red_chisq": reduced_chisquare, "luminosity_uv_optical": luminosity_uv_optical.value, "luminosity_uv_nir": luminosity_uv_nir.value, "bolometric_luminosity": "PLACEHOLDER"}
 
 
     @staticmethod
