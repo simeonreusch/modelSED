@@ -10,37 +10,46 @@ import sncosmo
 from astropy.cosmology import Planck15 as cosmo
 import sncosmo_spectral_v13
 
-FNU = u.erg / (u.cm**2 * u.s * u.Hz)
-FLAM = u.erg / (u.cm**2 * u.s * u.AA)
+FNU = u.erg / (u.cm ** 2 * u.s * u.Hz)
+FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 
 INSTRUMENT_DATA_DIR = "instrument_data"
 
+
 def flux_to_abmag(fluxnu):
-    return (-2.5*np.log10(fluxnu)) - 48.585
+    return (-2.5 * np.log10(fluxnu)) - 48.585
+
 
 def flux_err_to_abmag_err(fluxnu, fluxerr_nu):
-    return 1.08574/fluxnu * fluxerr_nu
+    return 1.08574 / fluxnu * fluxerr_nu
+
 
 def abmag_to_flux(abmag):
-    return np.power(10, (-(abmag + 48.585)/2.5))
+    return np.power(10, (-(abmag + 48.585) / 2.5))
+
 
 def abmag_err_to_flux_err(abmag, abmag_err):
-    return 3.39059E-20 * np.exp(-0.921034*abmag) * abmag_err
+    return 3.39059e-20 * np.exp(-0.921034 * abmag) * abmag_err
+
 
 def lambda_to_nu(wavelength):
-    return const.c.value/(wavelength*1E-10) # Hz
+    return const.c.value / (wavelength * 1e-10)  # Hz
+
 
 def nu_to_lambda(nu):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        lambda_value = const.c.value/(nu*1E-10)# Angstrom
+        lambda_value = const.c.value / (nu * 1e-10)  # Angstrom
     return lambda_value
 
+
 def flux_nu_to_lambda(fluxnu, wav):
-    return np.asarray(fluxnu) * 2.99792458E18 / np.asarray(wav)**2 * FLAM
+    return np.asarray(fluxnu) * 2.99792458e18 / np.asarray(wav) ** 2 * FLAM
+
 
 def flux_lambda_to_nu(fluxlambda, wav):
-    return np.asarray(fluxlambda) * 3.33564095E-19 * np.asarray(wav)**2 * FNU
+    return np.asarray(fluxlambda) * 3.33564095e-19 * np.asarray(wav) ** 2 * FNU
+
 
 def magnitude_in_band(band, spectrum):
     """ """
@@ -51,16 +60,17 @@ def magnitude_in_band(band, spectrum):
     for bandname in additional_bands.keys():
         fname = additional_bands[bandname]
         b = np.loadtxt(fname)
-        bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1]/50, name=bandname)
+        bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1] / 50, name=bandname)
         sncosmo.registry.register(bandpass, force=True)
 
     bp = sncosmo_spectral_v13.read_bandpass(bandpassfiles[band])
-    ab = sncosmo.get_magsystem('ab')
+    ab = sncosmo.get_magsystem("ab")
     zp_flux = ab.zpbandflux(zpbandfluxnames[band])
-    bandflux = spectrum.bandflux(bp)/zp_flux
+    bandflux = spectrum.bandflux(bp) / zp_flux
     mag = -2.5 * np.log10(bandflux)
 
     return mag
+
 
 def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float):
     """ """
@@ -80,15 +90,17 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
     # powerlaw = freq**alpha *u.erg / u.cm**2 / u.s * scale
     # spectrum = sncosmo_spectral_v13.Spectrum(wave=wl, flux=powerlaw, unit=FNU)
     # flux = np.trapz(spectrum._flux, freq.value) *u.erg / u.cm**2 / u.s
-    cut_freq = np.flip(const.c.value/(cut_wl.value*1E-10) * u.Hz)
-    flux = np.trapz(cut_flux, cut_freq) *u.erg / u.cm**2 / u.s
-    luminosity = flux * 4 * np.pi * d**2
+    cut_freq = np.flip(const.c.value / (cut_wl.value * 1e-10) * u.Hz)
+    flux = np.trapz(cut_flux, cut_freq) * u.erg / u.cm ** 2 / u.s
+    luminosity = flux * 4 * np.pi * d ** 2
     return luminosity
+
 
 def get_wavelengths_and_frequencies():
     wavelengths = np.arange(1000, 60000, 10) * u.AA
-    frequencies = const.c.value/(wavelengths.value*1E-10) * u.Hz
+    frequencies = const.c.value / (wavelengths.value * 1e-10) * u.Hz
     return wavelengths, frequencies
+
 
 def load_info_json(filename):
     with open(os.path.join(INSTRUMENT_DATA_DIR, f"{filename}.json")) as json_file:

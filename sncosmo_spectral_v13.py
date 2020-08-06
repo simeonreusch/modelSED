@@ -15,16 +15,24 @@ import astropy.units as u
 import astropy.constants as const
 from astropy import cosmology
 
-#from ._registry import Registry
+# from ._registry import Registry
 
-__all__ = ['get_bandpass', 'get_magsystem', 'read_bandpass', 'Bandpass',
-           'Spectrum', 'MagSystem', 'SpectralMagSystem', 'ABMagSystem',
-           'CompositeMagSystem']
+__all__ = [
+    "get_bandpass",
+    "get_magsystem",
+    "read_bandpass",
+    "Bandpass",
+    "Spectrum",
+    "MagSystem",
+    "SpectralMagSystem",
+    "ABMagSystem",
+    "CompositeMagSystem",
+]
 
 HC_ERG_AA = const.h.cgs.value * const.c.to(u.AA / u.s).value
 
-#_BANDPASSES = Registry()
-#_MAGSYSTEMS = Registry()
+# _BANDPASSES = Registry()
+# _MAGSYSTEMS = Registry()
 
 
 def get_bandpass(name):
@@ -41,8 +49,9 @@ def get_magsystem(name):
     return _MAGSYSTEMS.retrieve(name)
 
 
-def read_bandpass(fname, fmt='ascii', wave_unit=u.AA,
-                  trans_unit=u.dimensionless_unscaled, name=None):
+def read_bandpass(
+    fname, fmt="ascii", wave_unit=u.AA, trans_unit=u.dimensionless_unscaled, name=None
+):
     """Read bandpass from two-column ASCII file containing wavelength and
     transmission in each line.
 
@@ -68,12 +77,14 @@ def read_bandpass(fname, fmt='ascii', wave_unit=u.AA,
     band : `~sncosmo.Bandpass`
     """
 
-    if fmt != 'ascii':
-        raise ValueError("format {0} not supported. Supported formats: 'ascii'"
-                         .format(fmt))
-    t = ascii.read(fname, names=['wave', 'trans'])
-    return Bandpass(t['wave'], t['trans'], wave_unit=wave_unit,
-                    trans_unit=trans_unit, name=name)
+    if fmt != "ascii":
+        raise ValueError(
+            "format {0} not supported. Supported formats: 'ascii'".format(fmt)
+        )
+    t = ascii.read(fname, names=["wave", "trans"])
+    return Bandpass(
+        t["wave"], t["trans"], wave_unit=wave_unit, trans_unit=trans_unit, name=name
+    )
 
 
 class Bandpass(object):
@@ -110,14 +121,20 @@ class Bandpass(object):
 
     """
 
-    def __init__(self, wave, trans, wave_unit=u.AA,
-                 trans_unit=u.dimensionless_unscaled, name=None):
+    def __init__(
+        self,
+        wave,
+        trans,
+        wave_unit=u.AA,
+        trans_unit=u.dimensionless_unscaled,
+        name=None,
+    ):
         wave = np.asarray(wave, dtype=np.float64)
         trans = np.asarray(trans, dtype=np.float64)
         if wave.shape != trans.shape:
-            raise ValueError('shape of wave and trans must match')
+            raise ValueError("shape of wave and trans must match")
         if wave.ndim != 1:
-            raise ValueError('only 1-d arrays supported')
+            raise ValueError("only 1-d arrays supported")
 
         # Ensure that units are actually units and not quantities, so that
         # `to` method returns a float and not a Quantity.
@@ -135,16 +152,18 @@ class Bandpass(object):
         #
         # where photon energy = h * c / lambda
         if trans_unit != u.dimensionless_unscaled:
-            trans = (HC_ERG_AA / wave) * trans_unit.to(u.erg**-1, trans)
+            trans = (HC_ERG_AA / wave) * trans_unit.to(u.erg ** -1, trans)
 
         # Check that values are monotonically increasing.
         # We could sort them, but if this happens, it is more likely a user
         # error or faulty bandpass definition. So we leave it to the user to
         # sort them.
-        if not np.all(np.ediff1d(wave) > 0.):
-            raise ValueError('bandpass wavelength values must be monotonically'
-                             ' increasing when supplied in wavelength or '
-                             'decreasing when supplied in energy/frequency.')
+        if not np.all(np.ediff1d(wave) > 0.0):
+            raise ValueError(
+                "bandpass wavelength values must be monotonically"
+                " increasing when supplied in wavelength or "
+                "decreasing when supplied in energy/frequency."
+            )
         self.wave = wave
         self._dwave = np.gradient(wave)
         self.trans = trans
@@ -189,9 +208,9 @@ class Bandpass(object):
         return d, t
 
     def __repr__(self):
-        name = ''
+        name = ""
         if self.name is not None:
-            name = ' {0!r:s}'.format(self.name)
+            name = " {0!r:s}".format(self.name)
         return "<Bandpass{0:s} at 0x{1:x}>".format(name, id(self))
 
 
@@ -219,9 +238,17 @@ class Spectrum(object):
         Metadata.
     """
 
-    def __init__(self, wave, flux, error=None,
-                 unit=(u.erg / u.s / u.cm**2 / u.AA), wave_unit=u.AA,
-                 z=None, dist=None, meta=None):
+    def __init__(
+        self,
+        wave,
+        flux,
+        error=None,
+        unit=(u.erg / u.s / u.cm ** 2 / u.AA),
+        wave_unit=u.AA,
+        z=None,
+        dist=None,
+        meta=None,
+    ):
         self._wave = np.asarray(wave)
         self._flux = np.asarray(flux)
         self._wunit = wave_unit
@@ -232,7 +259,7 @@ class Spectrum(object):
         if error is not None:
             self._error = np.asarray(error)
             if self._wave.shape != self._error.shape:
-                raise ValueError('shape of wavelength and variance must match')
+                raise ValueError("shape of wavelength and variance must match")
         else:
             self._error = None
 
@@ -242,9 +269,9 @@ class Spectrum(object):
             self.meta = deepcopy(meta)
 
         if self._wave.shape != self._flux.shape:
-            raise ValueError('shape of wavelength and flux must match')
+            raise ValueError("shape of wavelength and flux must match")
         if self._wave.ndim != 1:
-            raise ValueError('only 1-d arrays supported')
+            raise ValueError("only 1-d arrays supported")
 
     @property
     def wave(self):
@@ -313,18 +340,17 @@ class Spectrum(object):
         band = get_bandpass(band)
         bwave, btrans = band.to_unit(self._wunit)
 
-        if (bwave[0] < self._wave[0] or bwave[-1] > self._wave[-1]):
+        if bwave[0] < self._wave[0] or bwave[-1] > self._wave[-1]:
             return None
 
-        mask = ((self._wave > bwave[0]) & (self._wave < bwave[-1]))
+        mask = (self._wave > bwave[0]) & (self._wave < bwave[-1])
         d = self._wave[mask]
         f = self._flux[mask]
 
         # First convert to ergs/s/cm^2/(wavelength unit)...
-        target_unit = u.erg / u.s / u.cm**2 / self._wunit
+        target_unit = u.erg / u.s / u.cm ** 2 / self._wunit
         if self._unit != target_unit:
-            f = self._unit.to(target_unit, f,
-                              u.spectral_density(self._wunit, d))
+            f = self._unit.to(target_unit, f, u.spectral_density(self._wunit, d))
 
         # Then convert ergs to photons: photons = Energy / (h * nu).
         f = f / const.h.cgs.value / self._wunit.to(u.Hz, d, u.spectral())
@@ -341,8 +367,7 @@ class Spectrum(object):
 
             # Do the same conversion as above
             if self._unit != target_unit:
-                e = self._unit.to(target_unit, e,
-	                                  u.spectral_density(self._wunit, d))
+                e = self._unit.to(target_unit, e, u.spectral_density(self._wunit, d))
             e = e / const.h.cgs.value / self._wunit.to(u.Hz, d, u.spectral())
             etot = np.sqrt(np.sum((e * binw) ** 2 * trans))
             return ftot, etot
@@ -385,15 +410,16 @@ class Spectrum(object):
         """
 
         if self._z is None:
-            raise ValueError('Must set current redshift in order to redshift'
-                             ' spectrum')
+            raise ValueError(
+                "Must set current redshift in order to redshift" " spectrum"
+            )
 
         if self._wunit.physical_type == u.m.physical_type:
-            factor = (1. + z) / (1. + self._z)
+            factor = (1.0 + z) / (1.0 + self._z)
         elif self._wunit.physical_type == u.Hz.physical_type:
-            factor = (1. + self._z) / (1. + z)
+            factor = (1.0 + self._z) / (1.0 + z)
         else:
-            raise ValueError('wavelength must be in wavelength or frequency')
+            raise ValueError("wavelength must be in wavelength or frequency")
 
         d = self._wave * factor
         f = self._flux / factor
@@ -403,13 +429,17 @@ class Spectrum(object):
             e = None
 
         if adjust_flux:
-            if self._dist is None and self._z == 0.:
-                raise ValueError("When current redshift is 0 and adjust_flux "
-                                 "is requested, current distance must be "
-                                 "defined")
-            if dist is None and z == 0.:
-                raise ValueError("When redshift is 0 and adjust_flux "
-                                 "is requested, dist must be defined")
+            if self._dist is None and self._z == 0.0:
+                raise ValueError(
+                    "When current redshift is 0 and adjust_flux "
+                    "is requested, current distance must be "
+                    "defined"
+                )
+            if dist is None and z == 0.0:
+                raise ValueError(
+                    "When redshift is 0 and adjust_flux "
+                    "is requested, dist must be defined"
+                )
             if cosmo is None:
                 cosmo = cosmology.get_current()
 
@@ -421,7 +451,7 @@ class Spectrum(object):
             if dist is None:
                 dist = cosmo.luminosity_distance(z)
 
-            if dist_in <= 0. or dist <= 0.:
+            if dist_in <= 0.0 or dist <= 0.0:
                 raise ValueError("Distances must be greater than 0.")
 
             # Adjust the flux
@@ -430,8 +460,16 @@ class Spectrum(object):
             if e is not None:
                 e *= factor
 
-        return Spectrum(d, f, error=e, z=z, dist=dist, meta=self.meta,
-                        unit=self._unit, wave_unit=self._wunit)
+        return Spectrum(
+            d,
+            f,
+            error=e,
+            z=z,
+            dist=dist,
+            meta=self.meta,
+            unit=self._unit,
+            wave_unit=self._wunit,
+        )
 
 
 class MagSystem(object):
@@ -485,7 +523,7 @@ class MagSystem(object):
 
     def band_mag_to_flux(self, mag, band):
         """Convert magnitude to flux in photons / s / cm^2"""
-        return self.zpbandflux(band) * 10.**(-0.4 * mag)
+        return self.zpbandflux(band) * 10.0 ** (-0.4 * mag)
 
 
 class CompositeMagSystem(MagSystem):
@@ -509,8 +547,7 @@ class CompositeMagSystem(MagSystem):
         super(CompositeMagSystem, self).__init__(name=name)
 
         if not len(bands) == len(offsets) == len(standards):
-            raise ValueError('Lengths of bands, standards, and offsets '
-                             'must match.')
+            raise ValueError("Lengths of bands, standards, and offsets " "must match.")
 
         self._bands = [get_bandpass(band) for band in bands]
         self._standards = [get_magsystem(s) for s in standards]
@@ -530,21 +567,20 @@ class CompositeMagSystem(MagSystem):
 
     def _refspectrum_bandflux(self, band):
         if band not in self._bands:
-            raise ValueError('band not in local magnitude system')
+            raise ValueError("band not in local magnitude system")
         i = self._bands.index(band)
         standard = self._standards[i]
         offset = self._offsets[i]
 
-        return 10.**(0.4 * offset) * standard.zpbandflux(band)
+        return 10.0 ** (0.4 * offset) * standard.zpbandflux(band)
 
     def __str__(self):
         s = "CompositeMagSystem {!r}:\n".format(self.name)
 
         for i in range(len(self._bands)):
             s += "  {!r}: system={!r}  offset={}\n".format(
-                self._bands[i].name,
-                self._standards[i].name,
-                self._offsets[i])
+                self._bands[i].name, self._standards[i].name, self._offsets[i]
+            )
         return s
 
 
@@ -576,8 +612,7 @@ class ABMagSystem(MagSystem):
         # AB spectrum is 3631 x 10^{-23} erg/s/cm^2/Hz
         # Get spectral values in photons/cm^2/s/Hz at bandpass wavelengths
         # by dividing by (h \nu).
-        f = 3631.e-23 / const.h.cgs.value / bwave
+        f = 3631.0e-23 / const.h.cgs.value / bwave
 
         binw = np.gradient(bwave)
         return np.sum(f * btrans * binw)
-
