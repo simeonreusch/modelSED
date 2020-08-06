@@ -7,8 +7,6 @@ import numpy as np
 import astropy.units as u
 from astropy import constants as const
 from scipy.optimize import curve_fit, OptimizeWarning
-from extinction import ccm89, apply, remove
-from astropy.modeling.models import BlackBody
 from astropy.cosmology import Planck15 as cosmo
 import sncosmo_spectral_v13
 import utilities, plot
@@ -153,18 +151,28 @@ class FitSpectrum:
         result = minimizer.minimize()
         parameters = result.params.valuesdict()
 
-        spectrum = blackbody_spectrum(
+        spectrum, bolometric_flux_unscaled = utilities.blackbody_spectrum(
             temperature=parameters["temp"],
             scale=parameters["scale"],
             extinction_av=extinction_av,
             extinction_rv=extinction_rv,
             redshift=self.redshift,
+            get_bolometric_flux=True,
         )
+
         spectrum_evaluated = self._evaluate_spectrum(spectrum, self.magnitudes)
 
         magnitudes_outdict = spectrum_evaluated[0]
         reduced_chisquare = spectrum_evaluated[1]
         residuals = spectrum_evaluated[2]
+
+        # Calculate bolometric luminosity
+        bolo_lumi, radius = utilities.calculate_bolometric_luminosity(
+            bolometric_flux=bolometric_flux_unscaled,
+            temperature=parameters["temp"],
+            scale=parameters["scale"],
+            redshift=self.redshift,
+        )
 
         if self.plot:
             annotations = {
@@ -172,6 +180,7 @@ class FitSpectrum:
                 "temperature": parameters["temp"],
                 "scale": parameters["scale"],
                 "reduced_chisquare": reduced_chisquare,
+                "bolometric_luminosity": bolo_lumi,
             }
             plot.plot_sed(magnitudes_outdict, spectrum, annotations, plotmag=True)
 
@@ -197,7 +206,8 @@ class FitSpectrum:
             "red_chisq": reduced_chisquare,
             "luminosity_uv_optical": luminosity_uv_optical.value,
             "luminosity_uv_nir": luminosity_uv_nir.value,
-            "bolometric_luminosity": "PLACEHOLDER",
+            "bolometric_luminosity": bolo_lumi.value,
+            "radius": radius.value,
         }
 
     @staticmethod
@@ -269,7 +279,7 @@ class FitSpectrum:
             extinction_rv = kwargs["extinction_rv"]
 
         redshift = 0.2666
-        spectrum = blackbody_spectrum(
+        spectrum = utilities.blackbody_spectrum(
             temperature=temp,
             scale=scale,
             extinction_av=extinction_av,
@@ -285,58 +295,3 @@ class FitSpectrum:
             return np.asarray(ab_model_list) - np.asarray(data)
         else:
             return ab_model_list
-
-
-def blackbody_spectrum(
-    temperature: float,
-    scale: float,
-    redshift: float = None,
-    extinction_av: float = None,
-    extinction_rv: float = None,
-):
-    """ """
-    wavelengths, frequencies = utilities.get_wavelengths_and_frequencies()
-    scale_lambda = 1 * utilities.FLAM / u.sr
-    scale_nu = 1 * utilities.FNU / u.sr
-    # Blackbody of scale 1
-    bb_nu = BlackBody(temperature=temperature * u.K, scale=scale_nu)
-    flux_nu_unscaled = bb_nu(wavelengths) * u.sr
-    flux_nu = flux_nu_unscaled / scale
-
-    flux_lambda = utilities.flux_nu_to_lambda(flux_nu, wavelengths)
-
-    if extinction_av is not None:
-        flux_lambda_reddened = apply(
-            ccm89(np.asarray(wavelengths), extinction_av, extinction_rv),
-            np.asarray(flux_lambda),
-        )
-        flux_nu_reddened = utilities.flux_lambda_to_nu(
-            flux_lambda_reddened, wavelengths
-        )
-        spectrum_reddened = sncosmo_spectral_v13.Spectrum(
-            wave=wavelengths, flux=flux_nu_reddened, unit=utilities.FNU
-        )
-
-    spectrum_unreddened = sncosmo_spectral_v13.Spectrum(
-        wave=wavelengths, flux=flux_nu, unit=utilities.FNU
-    )
-
-    if redshift is not None:
-        if extinction_av is not None:
-            spectrum_reddened.z = 0
-            spectrum_reddened_redshifted = spectrum_reddened.redshifted_to(
-                redshift, cosmo=cosmo
-            )
-            return spectrum_reddened_redshifted
-        else:
-            spectrum_unreddened.z = 0
-            spectrum_unreddened_redshifted = spectrum_unreddened.redshifted_to(
-                redshift, cosmo=cosmo
-            )
-            return spectrum_unreddened_redshifted
-
-    else:
-        if extinction_av is not None:
-            return spectrum_reddened
-        else:
-            return spectrum_unreddened

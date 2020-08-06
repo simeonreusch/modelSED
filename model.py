@@ -11,9 +11,9 @@ import astropy.units as u
 from astropy import constants as const
 import sncosmo_spectral_v13
 from astropy.utils.console import ProgressBar
-from scipy.interpolate import UnivariateSpline
-from fit import FitSpectrum, blackbody_spectrum
+from fit import FitSpectrum
 import utilities
+import plot
 
 FIG_WIDTH = 8
 FONTSIZE = 10
@@ -101,7 +101,7 @@ class SED:
                 slices.update({index: instrumentfilters})
         return slices
 
-    def create_epochs(self, nslices=30, **kwargs):
+    def fit_epochs(self, nslices=30, **kwargs):
         """" """
         print(f"Fitting {nslices} time slices.\n")
         mean_mags = self.get_mean_magnitudes(nslices + 1)
@@ -122,109 +122,11 @@ class SED:
     def plot_lightcurve(self):
         """" """
         fitparams = self.fitparams
-        # First the observational data
         lc_file = os.path.join(self.lc_dir, "full_lc_without_p200.csv")
-        lc = pd.read_csv(lc_file)
-        mjds = lc.mjd.values
-        mjd_min = np.min(mjds)
-        mjd_max = np.max(mjds)
-
-        plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
-        ax1 = plt.subplot(111)
-        ax1.set_ylabel("Magnitude (AB)")
-        ax1.set_xlabel("MJD")
-        ax1.invert_yaxis()
-
-        for key in self.filter_wl.keys():
-            instrumentfilter = key.split("_")
-            df = lc.query(
-                f"instrument == '{instrumentfilter[0]}' and filter == '{instrumentfilter[1]}'"
-            )
-            ax1.scatter(
-                df.mjd,
-                df.magpsf,
-                color=self.cmap[key],
-                marker=".",
-                alpha=0.5,
-                edgecolors=None,
-            )
-
-        # Now evaluate the model spectrum
-        wavelengths = np.arange(1000, 60000, 10) * u.AA
-        frequencies = const.c.value / (wavelengths.value * 1e-10)
-        df_model = pd.DataFrame(columns=["mjd", "band", "mag"])
-
-        for entry in fitparams:
-
-            if self.fittype == "powerlaw":
-                nu = (
-                    (
-                        frequencies ** fitparams[entry]["alpha"]
-                        * fitparams[entry]["scale"]
-                    )
-                    * u.erg
-                    / u.cm ** 2
-                    * u.Hz
-                    / u.s
-                )
-                spectrum = sncosmo_spectral_v13.Spectrum(
-                    wave=wavelengths, flux=nu, unit=utilities.FNU
-                )
-
-            if self.fittype == "bb":
-                spectrum = blackbody_spectrum(
-                    temperature=fitparams[entry]["temperature"],
-                    scale=fitparams[entry]["scale"],
-                    redshift=self.redshift,
-                    extinction_av=fitparams[entry]["extinction_av"],
-                    extinction_rv=fitparams[entry]["extinction_rv"],
-                )
-
-            for band in self.filter_wl.keys():
-                mag = utilities.magnitude_in_band(band, spectrum)
-                df_model = df_model.append(
-                    {"mjd": fitparams[entry]["mjd"], "band": band, "mag": mag},
-                    ignore_index=True,
-                )
-
-        bands_to_plot = self.filter_wl
-        del bands_to_plot["P200_J"]
-        del bands_to_plot["P200_H"]
-        del bands_to_plot["P200_Ks"]
-
-        for key in bands_to_plot.keys():
-            df_model_band = df_model.query(f"band == '{key}'")
-            spline = UnivariateSpline(
-                df_model_band.mjd.values, df_model_band.mag.values
-            )
-            spline.set_smoothing_factor(0.001)
-            ax1.plot(
-                df_model_band.mjd.values,
-                spline(df_model_band.mjd.values),
-                color=self.cmap[key],
-            )
-
-        plt.savefig(f"plots/lightcurve_{self.fittype}.png")
-        plt.close()
+        plot.plot_lightcurve(lc_file, self.fitparams, self.fittype, self.redshift)
 
     def plot_luminosity(self):
-        fitparams = self.fitparams
-        mjds = []
-        lumi_without_nir = []
-        lumi_with_nir = []
-        for entry in fitparams:
-            mjds.append(fitparams[entry]["mjd"])
-            lumi_without_nir.append(fitparams[entry]["luminosity_uv_optical"])
-            lumi_with_nir.append(fitparams[entry]["luminosity_uv_nir"])
-        plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
-        ax1 = plt.subplot(111)
-        ax1.set_ylabel("Luminosity [erg/s]")
-        ax1.set_xlabel("MJD")
-        ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
-        ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
-        ax1.legend()
-        plt.savefig(f"plots/luminosity_{self.fittype}.png")
-        plt.close()
+        plot.plot_luminosity(self.fitparams, self.fittype)
 
     def load_fitparams(self):
         with open(os.path.join(self.fit_dir, f"{self.fittype}.json")) as json_file:
@@ -235,7 +137,7 @@ class SED:
 redshift = 0.2666
 
 sed = SED(redshift=redshift, fittype="bb")
-# sed.create_epochs(29, extinction_av=1.7, extinction_rv=3.1)
+# sed.fit_epochs(29, extinction_av=1.7, extinction_rv=3.1)
 sed.load_fitparams()
 sed.plot_lightcurve()
 sed.plot_luminosity()
