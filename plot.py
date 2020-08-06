@@ -17,6 +17,16 @@ filter_wl = utilities.load_info_json("filter_wl")
 
 def plot_sed(mags: dict, spectrum, annotations: dict = None, plotmag: bool=False):
     """ """
+    if "temperature" in annotations.keys():
+        outpath = os.path.join("plots", "bb")
+    elif "alpha" in annotations.keys():
+        outpath = os.path.join("plots", "blackbody")
+    else:
+        outpath = "plots"
+
+    if not os.path.exists(outpath):
+        os.makedirs(outpath)
+
     frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
     spectrum_mags = []
     for index, wavelength in enumerate(spectrum.wave):
@@ -72,10 +82,5 @@ def plot_sed(mags: dict, spectrum, annotations: dict = None, plotmag: bool=False
             annotationstr += f"red. $\\chi^2$={reduced_chisquare:.2f}"
         plt.annotate(annotationstr, (1.2E15, 2.2E-27), fontsize=FONTSIZE, color="black", bbox=bbox)
 
-    if "temperature" in annotations.keys():
-        plt.savefig(f"plots/bb/{mjd}.png")
-    elif "alpha" in annotations.keys():
-        plt.savefig(f"plots/blackbody/{mjd}.png")
-    else:
-        plt.savefig(f"plots/{mjd}.png")
+    plt.savefig(os.path.join(outpath, f"{mjd}.png"))
     plt.close()

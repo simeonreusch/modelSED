@@ -130,8 +130,6 @@ class FitSpectrum():
         reduced_chisquare = spectrum_evaluated[1]
         residuals  = spectrum_evaluated[2]
 
-        
-
         if self.plot:
             annotations = {"mjd": self.magnitudes["mjd"], "temperature": parameters["temp"], "scale": parameters["scale"], "reduced_chisquare": reduced_chisquare}
             plot.plot_sed(magnitudes_outdict, spectrum, annotations, plotmag=True)
