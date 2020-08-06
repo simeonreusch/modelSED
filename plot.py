@@ -97,6 +97,9 @@ def plot_sed(
             bolometric_luminosity = annotations["bolometric_luminosity"]
             annotationstr += f"bol. lum.={bolometric_luminosity:.2E}\n"
 
+        if annotationstr.endswith("\n"):
+            annotationstr = annotationstr[:-2]
+
         if not plotmag:
             annotation_location = (1.2e15, 2.2e-27)
         else:

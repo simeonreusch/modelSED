@@ -187,7 +187,7 @@ class FitSpectrum:
                 "reduced_chisquare": reduced_chisquare,
                 "bolometric_luminosity": bolo_lumi,
             }
-            plot.plot_sed(magnitudes_outdict, spectrum, annotations, plotmag=True)
+            plot.plot_sed(magnitudes_outdict, spectrum, annotations)
 
         luminosity_uv_optical = utilities.calculate_luminosity(
             spectrum,

@@ -138,8 +138,8 @@ redshift = 0.2666
 
 # sed = SED(redshift=redshift, fittype="powerlaw")
 sed = SED(redshift=redshift, fittype="blackbody")
-# sed.fit_epochs(29)#, alpha=-1.1)
-# sed.fit_epochs(29, extinction_av=1.7, extinction_rv=3.1)
+# sed.fit_epochs(29, alpha=-1.1)
+sed.fit_epochs(29, extinction_av=1.7, extinction_rv=3.1)
 sed.load_fitparams()
 sed.plot_lightcurve()
 sed.plot_luminosity()
