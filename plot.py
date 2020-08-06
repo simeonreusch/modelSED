@@ -23,9 +23,9 @@ def plot_sed(
 ):
     """ """
     if "temperature" in annotations.keys():
-        outpath = os.path.join("plots", "bb")
-    elif "alpha" in annotations.keys():
         outpath = os.path.join("plots", "blackbody")
+    elif "alpha" in annotations.keys():
+        outpath = os.path.join("plots", "powerlaw")
     else:
         outpath = "plots"
 
@@ -126,18 +126,21 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         lumi_without_nir.append(fitparams[entry]["luminosity_uv_optical"])
         lumi_with_nir.append(fitparams[entry]["luminosity_uv_nir"])
 
-    # if fittype == "bb":
-    #     for entry in fitparams:
-    #         bolo_lumi.append(fitparams[entry]["bolometric_luminosity"])
+    if fittype == "blackbody":
+        for entry in fitparams:
+            bolo_lumi.append(fitparams[entry]["bolometric_luminosity"])
 
     plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
     ax1 = plt.subplot(111)
-    ax1.set_ylabel("Luminosity [erg/s]")
+    ax1.set_ylabel("Intrinsic Luminosity [erg/s]")
     ax1.set_xlabel("MJD")
-    # if fittype == "bb":
-    #     ax1.plot(mjds, bolo_lumi, label="Bolometric Luminosity")
-    ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
-    ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
+
+    if fittype == "blackbody":
+        ax1.plot(mjds, bolo_lumi, label="Bolometric Luminosity")
+    else:
+        ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
+        ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
+
     ax1.legend()
     plt.savefig(f"plots/luminosity_{fittype}.png")
     plt.close()
@@ -187,7 +190,7 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
                 wave=wavelengths, flux=nu, unit=utilities.FNU
             )
 
-        if fittype == "bb":
+        if fittype == "blackbody":
             spectrum = utilities.blackbody_spectrum(
                 temperature=fitparams[entry]["temperature"],
                 scale=fitparams[entry]["scale"],

@@ -35,7 +35,10 @@ def abmag_err_to_flux_err(abmag, abmag_err):
 
 
 def lambda_to_nu(wavelength):
-    return const.c.value / (wavelength * 1e-10)  # Hz
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        nu_value = const.c.value / (wavelength * 1e-10)  # Hz
+    return nu_value
 
 
 def nu_to_lambda(nu):
@@ -53,7 +56,7 @@ def flux_lambda_to_nu(fluxlambda, wav):
     return np.asarray(fluxlambda) * 3.33564095e-19 * np.asarray(wav) ** 2 * FNU
 
 
-def magnitude_in_band(band, spectrum):
+def magnitude_in_band(band: str, spectrum):
     """ """
     bandpassfiles = load_info_json("bandpassfiles")
     zpbandfluxnames = load_info_json("zpbandfluxnames")
@@ -96,7 +99,9 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
     return luminosity
 
 
-def calculate_bolometric_luminosity(bolometric_flux, temperature, scale, redshift):
+def calculate_bolometric_luminosity(
+    bolometric_flux: float, temperature: float, scale: float, redshift: float
+):
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.m)
 
@@ -180,7 +185,7 @@ def get_wavelengths_and_frequencies():
     return wavelengths, frequencies
 
 
-def load_info_json(filename):
-    with open(os.path.join(INSTRUMENT_DATA_DIR, f"{filename}.json")) as json_file:
+def load_info_json(filename: str):
+    with open(os.path.join(INSTRUMENT_DATA_DIR, filename + ".json")) as json_file:
         outfile = json.load(json_file)
     return outfile

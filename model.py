@@ -53,17 +53,17 @@ class SED:
         self.cmap = utilities.load_info_json("cmap")
         self.filter_wl = utilities.load_info_json("filter_wl")
 
-    def fit_sed(self, mags, **kwargs):
+    def fit_sed(self, mags: dict, **kwargs):
         """ """
         fit = FitSpectrum(mags, self.redshift)
-        if self.fittype == "bb":
+        if self.fittype == "blackbody":
             fitresult = fit.fit_blackbody(**kwargs)
         if self.fittype == "powerlaw":
             fitresult = fit.fit_powerlaw(**kwargs)
 
         return fitresult
 
-    def get_mean_magnitudes(self, bins=30):
+    def get_mean_magnitudes(self, bins: int = 30):
         """ """
         if self.path_to_lightcurve is None:
             lc_file = os.path.join(self.lc_dir, "full_lc.csv")
@@ -101,7 +101,7 @@ class SED:
                 slices.update({index: instrumentfilters})
         return slices
 
-    def fit_epochs(self, nslices=30, **kwargs):
+    def fit_epochs(self, nslices: int = 30, **kwargs):
         """" """
         print(f"Fitting {nslices} time slices.\n")
         mean_mags = self.get_mean_magnitudes(nslices + 1)
@@ -136,8 +136,10 @@ class SED:
 
 redshift = 0.2666
 
-sed = SED(redshift=redshift, fittype="bb")
-sed.fit_epochs(29, extinction_av=1.7, extinction_rv=3.1)
+# sed = SED(redshift=redshift, fittype="powerlaw")
+sed = SED(redshift=redshift, fittype="blackbody")
+# sed.fit_epochs(29)#, alpha=-1.1)
+# sed.fit_epochs(29, extinction_av=1.7, extinction_rv=3.1)
 sed.load_fitparams()
 sed.plot_lightcurve()
 sed.plot_luminosity()
