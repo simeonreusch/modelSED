@@ -161,14 +161,9 @@ class SED:
         else:
             bands = None
 
-        if self.fittype == "powerlaw":
-            result = fit.fit_global_parameters(
-                magnitudes=mean_mags, fittype=self.fittype, bands=bands
-            )
-        else:
-            result = fit.fit_global_parameters(
-                magnitudes=mean_mags, fittype=self.fittype, bands=bands
-            )
+        result = fit.fit_global_parameters(
+            magnitudes=mean_mags, fittype=self.fittype, bands=bands
+        )
 
         with open(
             os.path.join(self.fit_dir, f"{self.fittype}_global.json"), "w"
@@ -213,7 +208,7 @@ bands_for_global_fit = [
 
 nbins = 30
 
-sed = SED(redshift=redshift, fittype="lol", nbins=nbins)
+sed = SED(redshift=redshift, fittype="blackbody", nbins=nbins)
 sed.fit_global(bands=bands_for_global_fit)
 # sed.load_global_fitparams()
 # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)

@@ -94,23 +94,37 @@ class FitSpectrum:
             wl_observed.append(filter_wl[band])
 
         fit_params = Parameters()
-        for iy, y in enumerate(data):
-            fit_params.add(f"alpha_{iy+1}", value=-0.9, min=-1.5, max=-0.6)
-            fit_params.add(f"scale_{iy+1}", value=1e-14, min=1e-15, max=1e-12)
 
-        for i in range(2, len(data) + 1, 1):
-            fit_params[f"alpha_{i}"].expr = "alpha_1"
+        if fittype == "powerlaw":
+            for iy, y in enumerate(data):
+                fit_params.add(f"alpha_{iy+1}", value=-0.9, min=-1.5, max=-0.6)
+                fit_params.add(f"scale_{iy+1}", value=1e-14, min=1e-15, max=1e-12)
+
+            for i in range(2, len(data) + 1, 1):
+                fit_params[f"alpha_{i}"].expr = "alpha_1"
+
+        else:
+            for iy, y in enumerate(data):
+                fit_params.add(f"temperature_{iy+1}", value=80000, min=5000, max=15000)
+                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e20, max=1e25)
+                fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=1, max=4)
+                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=1, max=4)
+
+            for i in range(2, len(data) + 1, 1):
+                fit_params[f"extinction_av_{i}"].expr = "extinction_av_1"
+                fit_params[f"extinction_rv_{i}"].expr = "extinction_rv_1"
 
         minimizer = Minimizer(
-            self._global_powerlaw_minimizer,
+            self._global_minimizer,
             fit_params,
             fcn_args=(wl_observed, data, data_err),
-            fcn_kws={"fittype": "powerlaw"},
+            fcn_kws={"fittype": fittype, "redshift": self.redshift},
         )
 
-        out = minimizer.minimize()  # method="basinhopping")
+        out = minimizer.minimize()
         report_fit(out.params)
         parameters = out.params.valuesdict()
+        print(parameters)
 
         if self.plot:
 
@@ -119,11 +133,12 @@ class FitSpectrum:
                 flux_data = data[i]
                 flux_data_err = data_err[i]
                 freq_observed = const.c.value / (np.array(wl_observed) * 1e-10)
-                spectrum = utilities.powerlaw_spectrum(
-                    alpha=parameters[f"alpha_{i+1}"],
-                    scale=parameters[f"scale_{i+1}"],
-                    redshift=None,
-                )
+                if fittype == "powerlaw":
+                    spectrum = utilities.powerlaw_spectrum(
+                        alpha=parameters[f"alpha_{i+1}"],
+                        scale=parameters[f"scale_{i+1}"],
+                        redshift=None,
+                    )
                 plt.figure(figsize=(8, 0.75 * 8), dpi=300)
                 ax1 = plt.subplot(111)
                 ax1.set_ylim([2e-28, 4e-27])
@@ -135,12 +150,31 @@ class FitSpectrum:
                 plt.savefig(f"test_{i+1}.png")
                 plt.close()
 
-        return {"alpha": parameters["alpha_1"]}
+        if fittype == "powerlaw":
+            return {"alpha": parameters["alpha_1"]}
+        else:
+            return {
+                "extinction_av": parameters["extinction_av_1"],
+                "extinction_rv": parameters["extinction_rv_1"],
+            }
 
     @staticmethod
-    def _global_powerlaw_minimizer(params, x, data=None, data_err=None, **kwargs):
+    def _global_minimizer(params, x, data=None, data_err=None, **kwargs):
         """ calculate total residual for fits to several data sets held
         in a 2-D array, and modeled by the desired functions"""
+
+        if not "fittype" in kwargs.keys():
+            raise ValueError("you have to provide a fittype ('blackbody' or 'powerlaw'")
+
+        fittype = kwargs["fittype"]
+
+        if fittype == "blackbody" and not "redshift" in kwargs.keys():
+            raise ValueError(
+                "When choosing fittype=blackbody, you have to provide a redshift"
+            )
+
+        if fittype == "blackbody":
+            redshift = kwargs["redshift"]
 
         ndata, _ = data.shape
         residual = 0.0 * data[:]
@@ -149,30 +183,53 @@ class FitSpectrum:
         wl_filter = {v: k for k, v in filter_wl.items()}
 
         # make residual per data set
-        if "fittype" in kwargs.keys():
-            if kwargs["fittype"] == "powerlaw":
-                for i in range(ndata):
-                    alpha = params[f"alpha_{i+1}"]
-                    scale = params[f"scale_{i+1}"]
-                    spectrum = utilities.powerlaw_spectrum(
-                        alpha=alpha, scale=scale, redshift=None
-                    )
-                    fluxes = []
-                    for wl in x:
-                        ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
-                        flux = utilities.abmag_to_flux(ab_model)
-                        fluxes.append(flux)
-                    if data_err is None:
-                        residual[i, :] = data[i, :] - fluxes
-                    else:
-                        residual[i, :] = (data[i, :] - fluxes) / data_err[i, :]
+        if fittype == "powerlaw":
+            for i in range(ndata):
+                alpha = params[f"alpha_{i+1}"]
+                scale = params[f"scale_{i+1}"]
 
-            elif kwargs["fittype"] == "blackbody":
-                print("not yet implemented")
-        else:
-            print("you have to provide a fittype")
+                spectrum = utilities.powerlaw_spectrum(
+                    alpha=alpha, scale=scale, redshift=None
+                )
+
+                fluxes = []
+                for wl in x:
+                    ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+                    flux = utilities.abmag_to_flux(ab_model)
+                    fluxes.append(flux)
+                if data_err is None:
+                    residual[i, :] = data[i, :] - fluxes
+                else:
+                    residual[i, :] = (data[i, :] - fluxes) / data_err[i, :]
+
+        else:  # assume blackbody
+            for i in range(ndata):
+                temperature = params[f"temperature_{i+1}"]
+                scale = params[f"scale_{i+1}"]
+                extinction_av = params[f"extinction_av_{i+1}"]
+                extinction_rv = params[f"extinction_rv_{i+1}"]
+
+                spectrum = utilities.blackbody_spectrum(
+                    temperature=temperature,
+                    scale=scale,
+                    redshift=redshift,
+                    extinction_av=extinction_av,
+                    extinction_rv=extinction_rv,
+                )
+
+                fluxes = []
+
+                for wl in x:
+                    ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+                    flux = utilities.abmag_to_flux(ab_model)
+                    fluxes.append(flux)
+                if data_err is None:
+                    residual[i, :] = data[i, :] - fluxes
+                else:
+                    residual[i, :] = (data[i, :] - fluxes) / data_err[i, :]
 
         flattened_residual = residual.flatten()
+        print(flattened_residual)
         print(f"mean residual = {np.mean(flattened_residual)}")
         return flattened_residual
 
@@ -494,7 +551,6 @@ class FitSpectrum:
 
 
 # GRAVEYARD
-
 
 # magnitudes = {}
 # index = 0
