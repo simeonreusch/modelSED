@@ -34,6 +34,7 @@ def plot_sed(
 
     frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
     spectrum_mags = []
+
     for index, wavelength in enumerate(spectrum.wave):
         spectrum_mag = utilities.flux_to_abmag(spectrum.flux[index])
         spectrum_mags.append(spectrum_mag)

@@ -19,7 +19,7 @@ INSTRUMENT_DATA_DIR = "instrument_data"
 
 
 def flux_to_abmag(fluxnu):
-    return (-2.5 * np.log10(fluxnu)) - 48.585
+    return (-2.5 * np.log10(np.asarray(fluxnu))) - 48.585
 
 
 def flux_err_to_abmag_err(fluxnu, fluxerr_nu):
@@ -27,7 +27,7 @@ def flux_err_to_abmag_err(fluxnu, fluxerr_nu):
 
 
 def abmag_to_flux(abmag):
-    return np.power(10, (-(abmag + 48.585) / 2.5))
+    return np.power(10, (-(np.asarray(abmag) + 48.585) / 2.5))
 
 
 def abmag_err_to_flux_err(abmag, abmag_err):
@@ -116,6 +116,33 @@ def calculate_bolometric_luminosity(
     luminosity = luminosity_watt.to(u.erg / u.s)
 
     return luminosity, radius
+
+
+def powerlaw_spectrum(
+    alpha: float, scale: float, redshift: float = None,
+):
+    """ """
+    wavelengths, frequencies = get_wavelengths_and_frequencies()
+    if scale is None:
+        powerlaw_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s
+    else:
+        powerlaw_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
+
+    spectrum_unreddened = sncosmo_spectral_v13.Spectrum(
+        wave=wavelengths, flux=powerlaw_nu, unit=FNU
+    )
+
+    if redshift is not None:
+        spectrum_unreddened.z = 0
+        spectrum_unreddened_redshifted = spectrum_unreddened.redshifted_to(
+            redshift, cosmo=cosmo
+        )
+        outspectrum = spectrum_unreddened_redshifted
+
+    else:
+        outspectrum = spectrum_unreddened
+
+    return outspectrum
 
 
 def blackbody_spectrum(
