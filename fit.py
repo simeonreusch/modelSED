@@ -50,79 +50,6 @@ class FitSpectrum:
                     bands.add(key)
                 i += 1
 
-        # ### Now we normalize everything to one band
-        # nr_bins = len(reduced_dict)
-
-        # # See if there is a band present in each datapoint
-        # count_occurences = {}
-        # for band in bands:
-        #     i = 0
-        #     for index, value in enumerate(reduced_dict.values()):
-        #         if band in value:
-        #             i += 1
-        #     count_occurences.update({band: i})
-
-        # to_delete = []
-        # for entry in count_occurences:
-        #     if count_occurences[entry] < nr_bins:
-        #         to_delete.append(entry)
-
-        # for entry in to_delete:
-        #     del count_occurences[entry]
-
-        # if len(count_occurences) == 0:
-        #     raise ValueError("There is no single band present in all bins. Normalization not possible")
-
-        # # Now choose the normalization baseline: band with smallest mean error
-        # magnitude_error = {}
-        # for band in count_occurences.keys():
-        #     mag_errs = []
-        #     for index, mjd in enumerate(reduced_dict):
-        #         mag, mag_err = reduced_dict[mjd][band]
-        #         mag_errs.append(mag_err)
-        #     mean_mag_err = np.sqrt(np.sum(np.asarray(mag_errs) ** 2)) / len(mag_errs)
-        #     magnitude_error.update({band: mean_mag_err})
-
-        # normalization_band = min(magnitude_error, key=magnitude_error.get)
-
-        # print(f"{normalization_band} has the smallest error, will normalize with respect to this band.")
-
-        # normalized_magnitudes = {}
-
-        # fit_dict = {}
-        # for index, mjd in enumerate(reduced_dict):
-        #     temp_dict = {}
-        #     for entry in reduced_dict[mjd]:
-        #         mag = reduced_dict[mjd][entry][0]
-        #         mag_reference = reduced_dict[mjd][normalization_band][0]
-        #         mag_err = reduced_dict[mjd][entry][1]
-        #         normalized_mag = mag/mag_reference
-        #         normalized_mag_err = mag_err/mag_reference
-        #         normalized_flux = utilities.abmag_to_flux(mag)/utilities.abmag_to_flux(mag_reference)
-        #         normalized_flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)/utilities.abmag_to_flux(mag_reference)
-        #         temp_dict.update({entry: [normalized_flux, normalized_flux_err]})
-        #     fit_dict.update({mjd: temp_dict})
-
-        # reformatted_dict = collections.defaultdict(list)
-        # test = collections.defaultdict(dict)
-
-        # for mjd, entry in fit_dict.items():
-        #     for band, fluxes in entry.items():
-        #         fluxes.append(mjd)
-        #         reformatted_dict[band].append(fluxes)
-
-        # data = {}
-
-        # for band, value in reformatted_dict.items():
-        #     fluxes = []
-        #     flux_errs = []
-        #     mjds = []
-        #     for item in value:
-        #         fluxes.append(item[0])
-        #         flux_errs.append(item[1])
-        #         mjds.append(item[2])
-        #     data.update({band: {"mjd": mjds, "flux": fluxes, "flux_err": flux_errs}})
-
         cmap = utilities.load_info_json("cmap")
 
         wavelengths = []
@@ -168,8 +95,8 @@ class FitSpectrum:
 
         fit_params = Parameters()
         for iy, y in enumerate(data):
-            fit_params.add(f"alpha_{iy+1}", value=-1.3, min=-1.5, max=-0.6)
-            fit_params.add(f"scale_{iy+1}", value=1e-13, min=1e-14, max=1e-9)
+            fit_params.add(f"alpha_{iy+1}", value=-0.9, min=-1.5, max=-0.6)
+            fit_params.add(f"scale_{iy+1}", value=1e-14, min=1e-15, max=1e-12)
 
         for i in range(2, len(data) + 1, 1):
             fit_params[f"alpha_{i}"].expr = "alpha_1"
@@ -185,37 +112,33 @@ class FitSpectrum:
         report_fit(out.params)
         parameters = out.params.valuesdict()
 
-        print(parameters)
+        if self.plot:
 
-        # parameters = collections.OrderedDict([('alpha_1', -1.1558700608543062), ('scale_1', 1.9896648544582175e-13), ('alpha_2', -1.1558700608543062), ('scale_2', 9.765036833606492e-11), ('alpha_3', -1.1558700608543062), ('scale_3', 2.1750450964240234e-11), ('alpha_4', -1.1558700608543062), ('scale_4', 2.944552024061622e-11), ('alpha_5', -1.1558700608543062), ('scale_5', 9.759582005967217e-11), ('alpha_6', -1.1558700608543062), ('scale_6', 4.3149434818132966e-11), ('alpha_7', -1.1558700608543062), ('scale_7', 1.5822413548371946e-11)])
+            for i in range(len(data)):
 
-        for i in range(len(data)):
+                flux_data = data[i]
+                flux_data_err = data_err[i]
+                freq_observed = const.c.value / (np.array(wl_observed) * 1e-10)
+                spectrum = utilities.powerlaw_spectrum(
+                    alpha=parameters[f"alpha_{i+1}"],
+                    scale=parameters[f"scale_{i+1}"],
+                    redshift=None,
+                )
+                plt.figure(figsize=(8, 0.75 * 8), dpi=300)
+                ax1 = plt.subplot(111)
+                ax1.set_ylim([2e-28, 4e-27])
+                ax1.set_xlim([3.5e14, 2e15])
+                plt.xscale("log")
+                plt.yscale("log")
+                ax1.errorbar(freq_observed, flux_data, flux_data_err, fmt=".")
+                ax1.plot(utilities.lambda_to_nu(np.array(spectrum.wave)), spectrum.flux)
+                plt.savefig(f"test_{i+1}.png")
+                plt.close()
 
-            flux_data = data[i]
-            freq_observed = const.c.value / (np.array(wl_observed) * 1e-10)
-
-            # spectrum = utilities.powerlaw_spectrum(alpha=-1.1558700608543062, scale=1.9896648544582175e-13, redshift=None)
-            spectrum = utilities.powerlaw_spectrum(
-                alpha=parameters[f"alpha_{i+1}"],
-                scale=parameters[f"scale_{i+1}"],
-                redshift=None,
-            )
-
-            plt.figure(figsize=(8, 0.75 * 8), dpi=300)
-            ax1 = plt.subplot(111)
-            ax1.set_ylim([2e-28, 4e-27])
-            ax1.set_xlim([3.5e14, 2e15])
-            plt.xscale("log")
-            plt.yscale("log")
-            ax1.errorbar(freq_observed, flux_data, fmt=".")
-            ax1.plot(utilities.lambda_to_nu(np.array(spectrum.wave)), spectrum.flux)
-            plt.savefig(f"test_{i+1}.png")
-            plt.close()
-
-        return parameters["alpha_1"]
+        return {"alpha": parameters["alpha_1"]}
 
     @staticmethod
-    def _global_powerlaw_minimizer(params, x, data=None, data_err=None ** kwargs):
+    def _global_powerlaw_minimizer(params, x, data=None, data_err=None, **kwargs):
         """ calculate total residual for fits to several data sets held
         in a 2-D array, and modeled by the desired functions"""
 
@@ -226,7 +149,6 @@ class FitSpectrum:
         wl_filter = {v: k for k, v in filter_wl.items()}
 
         # make residual per data set
-
         if "fittype" in kwargs.keys():
             if kwargs["fittype"] == "powerlaw":
                 for i in range(ndata):
@@ -251,7 +173,7 @@ class FitSpectrum:
             print("you have to provide a fittype")
 
         flattened_residual = residual.flatten()
-        print(flattened_residual)
+        print(f"mean residual = {np.mean(flattened_residual)}")
         return flattened_residual
 
     def fit_bin_powerlaw(self, **kwargs):
@@ -298,7 +220,6 @@ class FitSpectrum:
         spectrum = sncosmo_spectral_v13.Spectrum(
             wave=self.wavelengths, flux=powerlaw_nu, unit=utilities.FNU
         )
-        # print(spectrum._flux)
 
         spectrum_evaluated = self._evaluate_spectrum(spectrum, self.magnitudes)
 
@@ -703,3 +624,77 @@ class FitSpectrum:
 #         plt.xscale("log")
 #         plt.yscale("log")
 #         plt.savefig("test2.png")
+
+
+# ### Now we normalize everything to one band
+# nr_bins = len(reduced_dict)
+
+# # See if there is a band present in each datapoint
+# count_occurences = {}
+# for band in bands:
+#     i = 0
+#     for index, value in enumerate(reduced_dict.values()):
+#         if band in value:
+#             i += 1
+#     count_occurences.update({band: i})
+
+# to_delete = []
+# for entry in count_occurences:
+#     if count_occurences[entry] < nr_bins:
+#         to_delete.append(entry)
+
+# for entry in to_delete:
+#     del count_occurences[entry]
+
+# if len(count_occurences) == 0:
+#     raise ValueError("There is no single band present in all bins. Normalization not possible")
+
+# # Now choose the normalization baseline: band with smallest mean error
+# magnitude_error = {}
+# for band in count_occurences.keys():
+#     mag_errs = []
+#     for index, mjd in enumerate(reduced_dict):
+#         mag, mag_err = reduced_dict[mjd][band]
+#         mag_errs.append(mag_err)
+#     mean_mag_err = np.sqrt(np.sum(np.asarray(mag_errs) ** 2)) / len(mag_errs)
+#     magnitude_error.update({band: mean_mag_err})
+
+# normalization_band = min(magnitude_error, key=magnitude_error.get)
+
+# print(f"{normalization_band} has the smallest error, will normalize with respect to this band.")
+
+# normalized_magnitudes = {}
+
+# fit_dict = {}
+# for index, mjd in enumerate(reduced_dict):
+#     temp_dict = {}
+#     for entry in reduced_dict[mjd]:
+#         mag = reduced_dict[mjd][entry][0]
+#         mag_reference = reduced_dict[mjd][normalization_band][0]
+#         mag_err = reduced_dict[mjd][entry][1]
+#         normalized_mag = mag/mag_reference
+#         normalized_mag_err = mag_err/mag_reference
+#         normalized_flux = utilities.abmag_to_flux(mag)/utilities.abmag_to_flux(mag_reference)
+#         normalized_flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)/utilities.abmag_to_flux(mag_reference)
+#         temp_dict.update({entry: [normalized_flux, normalized_flux_err]})
+#     fit_dict.update({mjd: temp_dict})
+
+# reformatted_dict = collections.defaultdict(list)
+# test = collections.defaultdict(dict)
+
+# for mjd, entry in fit_dict.items():
+#     for band, fluxes in entry.items():
+#         fluxes.append(mjd)
+#         reformatted_dict[band].append(fluxes)
+
+# data = {}
+
+# for band, value in reformatted_dict.items():
+#     fluxes = []
+#     flux_errs = []
+#     mjds = []
+#     for item in value:
+#         fluxes.append(item[0])
+#         flux_errs.append(item[1])
+#         mjds.append(item[2])
+#     data.update({band: {"mjd": mjds, "flux": fluxes, "flux_err": flux_errs}})

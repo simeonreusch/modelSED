@@ -36,6 +36,13 @@ class SED:
         **kwargs,
     ):
 
+        allowed_fittype = ["powerlaw", "blackbody"]
+
+        if not fittype in allowed_fittype:
+            raise Exception(
+                "You have to choose either 'powerlaw' or 'blackbody' as fittype"
+            )
+
         self.path_to_lightcurve = path_to_lightcurve
         self.nbins = nbins
         self.redshift = redshift
@@ -115,10 +122,16 @@ class SED:
     def fit_bins(self, **kwargs):
         """" """
         print(f"Fitting {self.nbins} time bins.\n")
-        mean_mags = self.get_mean_magnitudes()
+
+        if "bands" in kwargs:
+            mean_mags = self.get_mean_magnitudes(bands=kwargs["bands"])
+        else:
+            mean_mags = self.get_mean_magnitudes()
+
         fitparams = {}
         i = 0
         progress_bar = ProgressBar(len(mean_mags))
+
         for index, entry in enumerate(mean_mags):
             if len(mean_mags[entry]) > 2:
                 result = self.fit_one_bin(mean_mags[entry], **kwargs)
@@ -149,16 +162,27 @@ class SED:
             bands = None
 
         if self.fittype == "powerlaw":
-            alpha = fit.fit_global_parameters(
+            result = fit.fit_global_parameters(
                 magnitudes=mean_mags, fittype=self.fittype, bands=bands
             )
-            return alpha
+        else:
+            result = fit.fit_global_parameters(
+                magnitudes=mean_mags, fittype=self.fittype, bands=bands
+            )
 
-    def plot_lightcurve(self):
+        with open(
+            os.path.join(self.fit_dir, f"{self.fittype}_global.json"), "w"
+        ) as outfile:
+            json.dump(result, outfile)
+            return result
+
+    def plot_lightcurve(self, **kwargs):
         """" """
         fitparams = self.fitparams
         lc_file = os.path.join(self.lc_dir, "full_lc_without_p200.csv")
-        plot.plot_lightcurve(lc_file, self.fitparams, self.fittype, self.redshift)
+        plot.plot_lightcurve(
+            lc_file, self.fitparams, self.fittype, self.redshift, **kwargs
+        )
 
     def plot_luminosity(self):
         plot.plot_luminosity(self.fitparams, self.fittype)
@@ -167,6 +191,13 @@ class SED:
         with open(os.path.join(self.fit_dir, f"{self.fittype}.json")) as json_file:
             fitparams = json.load(json_file)
         self.fitparams = fitparams
+
+    def load_global_fitparams(self):
+        with open(
+            os.path.join(self.fit_dir, f"{self.fittype}_global.json")
+        ) as json_file:
+            fitparams_global = json.load(json_file)
+        self.fitparams_global = fitparams_global
 
 
 redshift = 0.2666
@@ -180,11 +211,12 @@ bands_for_global_fit = [
     "Swift_UVM2",
 ]
 
+nbins = 30
 
-sed = SED(redshift=redshift, fittype="powerlaw", nbins=30)
-alpha = sed.fit_global(bands=bands_for_global_fit)
-# sed = SED(redshift=redshift, fittype="blackbody")
-sed.fit_bins(alpha=alpha)
-sed.load_fitparams()
-sed.plot_lightcurve()
-sed.plot_luminosity()
+sed = SED(redshift=redshift, fittype="lol", nbins=nbins)
+sed.fit_global(bands=bands_for_global_fit)
+# sed.load_global_fitparams()
+# sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
+# sed.load_fitparams()
+# sed.plot_lightcurve(bands=bands_for_global_fit)
+# sed.plot_luminosity()

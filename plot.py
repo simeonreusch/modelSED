@@ -13,9 +13,11 @@ import utilities, sncosmo_spectral_v13
 
 FIG_WIDTH = 8
 FONTSIZE = 10
+ANNOTATION_FONTSIZE = 8
 
 cmap = utilities.load_info_json("cmap")
 filter_wl = utilities.load_info_json("filter_wl")
+filterlabel = utilities.load_info_json("filterlabel")
 
 
 def plot_sed(
@@ -92,8 +94,10 @@ def plot_sed(
             mjd = annotations["mjd"]
             annotationstr += f"MJD={mjd:.2f}\n"
         if "reduced_chisquare" in annotations.keys():
+            temp = "red. $\\chi^2$="
             reduced_chisquare = annotations["reduced_chisquare"]
-            annotationstr += f"red. $\\chi^2$={reduced_chisquare:.2f}\n"
+            annotationstr += temp
+            annotationstr += f"{reduced_chisquare:.2f}\n"
         if "bolometric_luminosity" in annotations.keys():
             bolometric_luminosity = annotations["bolometric_luminosity"]
             annotationstr += f"bol. lum.={bolometric_luminosity:.2E}\n"
@@ -166,14 +170,26 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
     ax1.set_xlabel("MJD")
     ax1.invert_yaxis()
 
+    if "bands" in kwargs:
+        exclude_bands = np.setdiff1d(list(filter_wl), kwargs["bands"])
+    else:
+        exclude_bands = []
+
     for key in filter_wl.keys():
-        instrumentfilter = key.split("_")
-        df = lc.query(
-            f"instrument == '{instrumentfilter[0]}' and filter == '{instrumentfilter[1]}'"
-        )
-        ax1.scatter(
-            df.mjd, df.magpsf, color=cmap[key], marker=".", alpha=0.5, edgecolors=None,
-        )
+        if not key in exclude_bands:
+            instrumentfilter = key.split("_")
+            df = lc.query(
+                f"instrument == '{instrumentfilter[0]}' and filter == '{instrumentfilter[1]}'"
+            )
+            ax1.scatter(
+                df.mjd,
+                df.magpsf,
+                color=cmap[key],
+                marker=".",
+                alpha=0.5,
+                edgecolors=None,
+                label=filterlabel[key],
+            )
 
     # Now evaluate the model spectrum
     wavelengths = np.arange(1000, 60000, 10) * u.AA
@@ -204,24 +220,26 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             )
 
         for band in filter_wl.keys():
-            mag = utilities.magnitude_in_band(band, spectrum)
-            df_model = df_model.append(
-                {"mjd": fitparams[entry]["mjd"], "band": band, "mag": mag},
-                ignore_index=True,
+            if not band in exclude_bands:
+                mag = utilities.magnitude_in_band(band, spectrum)
+                df_model = df_model.append(
+                    {"mjd": fitparams[entry]["mjd"], "band": band, "mag": mag},
+                    ignore_index=True,
+                )
+
+    for key in filter_wl.keys():
+        if not key in exclude_bands:
+            df_model_band = df_model.query(f"band == '{key}'")
+            spline = UnivariateSpline(
+                df_model_band.mjd.values, df_model_band.mag.values
+            )
+            spline.set_smoothing_factor(0.001)
+            ax1.plot(
+                df_model_band.mjd.values,
+                spline(df_model_band.mjd.values),
+                color=cmap[key],
             )
 
-    bands_to_plot = filter_wl
-    del bands_to_plot["P200_J"]
-    del bands_to_plot["P200_H"]
-    del bands_to_plot["P200_Ks"]
-
-    for key in bands_to_plot.keys():
-        df_model_band = df_model.query(f"band == '{key}'")
-        spline = UnivariateSpline(df_model_band.mjd.values, df_model_band.mag.values)
-        spline.set_smoothing_factor(0.001)
-        ax1.plot(
-            df_model_band.mjd.values, spline(df_model_band.mjd.values), color=cmap[key],
-        )
-
+    plt.legend(fontsize=ANNOTATION_FONTSIZE)
     plt.savefig(f"plots/lightcurve_{fittype}.png")
     plt.close()
