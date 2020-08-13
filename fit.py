@@ -104,7 +104,9 @@ class FitSpectrum:
 
         else:
             for iy, y in enumerate(data):
-                fit_params.add(f"temperature_{iy+1}", value=80000, min=10000, max=150000)
+                fit_params.add(
+                    f"temperature_{iy+1}", value=80000, min=10000, max=150000
+                )
                 fit_params.add(f"scale_{iy+1}", value=1e23, min=1e22, max=1e25)
                 fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=1, max=3.5)
                 fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=2, max=4)
@@ -149,11 +151,20 @@ class FitSpectrum:
                         temperature=parameters[f"temperature_{i+1}"],
                         scale=parameters[f"scale_{i+1}"],
                         redshift=self.redshift,
-                        extinction_av = parameters[f"extinction_av_{i+1}"],
-                        extinction_rv = parameters[f"extinction_rv_{i+1}"],
-            )
+                        extinction_av=parameters[f"extinction_av_{i+1}"],
+                        extinction_rv=parameters[f"extinction_rv_{i+1}"],
+                    )
 
-                plot.plot_sed_from_flux(flux=flux_data, bands=bands_to_fit, spectrum=spectrum, fittype=fittype, redshift=self.redshift, flux_err=flux_data_err, index=i, plotmag=False)
+                plot.plot_sed_from_flux(
+                    flux=flux_data,
+                    bands=bands_to_fit,
+                    spectrum=spectrum,
+                    fittype=fittype,
+                    redshift=self.redshift,
+                    flux_err=flux_data_err,
+                    index=i,
+                    plotmag=False,
+                )
 
         if fittype == "powerlaw":
             return {"alpha": parameters["alpha_1"]}
@@ -264,6 +275,7 @@ class FitSpectrum:
                 return x ** (alpha) * b
 
         else:
+
             def func_powerlaw(x, a, b):
                 return x ** (-a) * b
 

@@ -162,7 +162,7 @@ class SED:
             bands = None
 
         result = fit.fit_global_parameters(
-            magnitudes=mean_mags, fittype=self.fittype, min_datapoints=len(bands), 
+            magnitudes=mean_mags, fittype=self.fittype, min_datapoints=len(bands),
         )
 
         with open(
@@ -201,8 +201,8 @@ bands_for_global_fit = [
     "P48+ZTF_g",
     "P48+ZTF_r",
     "P48+ZTF_i",
-   # "Swift_UVW2",
-   # "Swift_UVW1",
+    # "Swift_UVW2",
+    # "Swift_UVW1",
     "Swift_UVM2",
 ]
 
@@ -216,7 +216,11 @@ sed.load_global_fitparams()
 if fittype == "powerlaw":
     sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
 else:
-    sed.fit_bins(extinction_av=sed.fitparams_global["extinction_av"], extinction_rv=sed.fitparams_global["extinction_rv"], bands=bands_for_global_fit)
+    sed.fit_bins(
+        extinction_av=sed.fitparams_global["extinction_av"],
+        extinction_rv=sed.fitparams_global["extinction_rv"],
+        bands=bands_for_global_fit,
+    )
 sed.load_fitparams()
 sed.plot_lightcurve(bands=bands_for_global_fit)
 sed.plot_luminosity()

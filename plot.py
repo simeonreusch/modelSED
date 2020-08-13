@@ -21,7 +21,14 @@ filterlabel = utilities.load_info_json("filterlabel")
 
 
 def plot_sed_from_flux(
-    flux: list, bands: list, spectrum, fittype: str = "powerlaw", redshift: float = None, flux_err: list = None, index: int = None, plotmag: bool = False
+    flux: list,
+    bands: list,
+    spectrum,
+    fittype: str = "powerlaw",
+    redshift: float = None,
+    flux_err: list = None,
+    index: int = None,
+    plotmag: bool = False,
 ):
     """ """
     wl_observed = []
@@ -40,7 +47,7 @@ def plot_sed_from_flux(
         ax1.set_ylim([2e-28, 4e-27])
         ax1.set_xlim([3.5e14, 2e15])
         plt.xscale("log")
-        plt.yscale("log")    
+        plt.yscale("log")
 
     if plotmag:
         mag_model = []
@@ -50,18 +57,43 @@ def plot_sed_from_flux(
             model_wl.append(filter_wl[band])
         ax1.scatter(model_wl, mag_model, marker=".", color="black", label="model")
         if flux_err is not None:
-            ax1.errorbar(utilities.nu_to_lambda(freq_observed), utilities.flux_to_abmag(flux), utilities.flux_err_to_abmag_err(flux, flux_err), fmt=".", color="blue", label="data")
+            ax1.errorbar(
+                utilities.nu_to_lambda(freq_observed),
+                utilities.flux_to_abmag(flux),
+                utilities.flux_err_to_abmag_err(flux, flux_err),
+                fmt=".",
+                color="blue",
+                label="data",
+            )
         else:
-            ax1.scatter(utilities.nu_to_lambda(freq_observed), utilities.flux_to_abmag(flux), marker=".", color="blue", label="data")
-        ax1.plot(np.array(spectrum.wave), utilities.flux_to_abmag(spectrum.flux), color="gray", label="model spectrum")
+            ax1.scatter(
+                utilities.nu_to_lambda(freq_observed),
+                utilities.flux_to_abmag(flux),
+                marker=".",
+                color="blue",
+                label="data",
+            )
+        ax1.plot(
+            np.array(spectrum.wave),
+            utilities.flux_to_abmag(spectrum.flux),
+            color="gray",
+            label="model spectrum",
+        )
         ax1.set_ylabel("Magnitude [AB]")
     else:
         if flux_err is not None:
-            ax1.errorbar(freq_observed, flux, flux_err, fmt=".", color="blue", label="data")
+            ax1.errorbar(
+                freq_observed, flux, flux_err, fmt=".", color="blue", label="data"
+            )
         else:
             ax1.scatter(freq_observed, flux, marker=".", color="blue", label="data")
 
-        ax1.plot(utilities.lambda_to_nu(np.array(spectrum.wave)), spectrum.flux, color="gray", label = "model spectrum")
+        ax1.plot(
+            utilities.lambda_to_nu(np.array(spectrum.wave)),
+            spectrum.flux,
+            color="gray",
+            label="model spectrum",
+        )
         ax1.set_ylabel(r"$F_\nu~[$erg$~/~ s \cdot $cm$^2 \cdot$ Hz]")
 
     ax2 = ax1.secondary_xaxis(
