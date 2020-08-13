@@ -42,7 +42,7 @@ class FitSpectrum:
 
         for index, value in enumerate(magnitudes.values()):
             nr_entries = len(value.keys())
-            if nr_entries > min_datapoints + 1:  # because mjd is not a datapoint
+            if nr_entries >= min_datapoints + 1:  # because mjd is not a datapoint
                 mjd = value["mjd"]
                 del value["mjd"]
                 reduced_dict.update({mjd: value})
@@ -51,7 +51,6 @@ class FitSpectrum:
                 i += 1
 
         cmap = utilities.load_info_json("cmap")
-
         wavelengths = []
         freqs = []
         mean_fluxes = []
@@ -62,7 +61,7 @@ class FitSpectrum:
 
         for mjd in reduced_dict.keys():
             nr_entries = len(reduced_dict[mjd])
-            if nr_entries < 6:
+            if nr_entries < min_datapoints:
                 continue
             else:
                 fit_dict.update({mjd: reduced_dict[mjd]})
@@ -105,10 +104,10 @@ class FitSpectrum:
 
         else:
             for iy, y in enumerate(data):
-                fit_params.add(f"temperature_{iy+1}", value=80000, min=5000, max=15000)
-                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e20, max=1e25)
-                fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=1, max=4)
-                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=1, max=4)
+                fit_params.add(f"temperature_{iy+1}", value=80000, min=10000, max=150000)
+                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e22, max=1e25)
+                fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=1, max=3.5)
+                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=2, max=4)
 
             for i in range(2, len(data) + 1, 1):
                 fit_params[f"extinction_av_{i}"].expr = "extinction_av_1"
@@ -124,7 +123,13 @@ class FitSpectrum:
         out = minimizer.minimize()
         report_fit(out.params)
         parameters = out.params.valuesdict()
+
+        # fixed av and rv
+        # parameters = collections.OrderedDict([('temperature_1', 21758.158194145955), ('scale_1', 1.2322212219774704e+23), ('extinction_av_1', 1.3413154796651707), ('extinction_rv_1', 3.9999999999694484), ('temperature_2', 18802.366783301), ('scale_2', 9.04511248692439e+22), ('extinction_av_2', 1.3413154796651707), ('extinction_rv_2', 3.9999999999694484), ('temperature_3', 19550.937733108974), ('scale_3', 9.379462638260712e+22), ('extinction_av_3', 1.3413154796651707), ('extinction_rv_3', 3.9999999999694484), ('temperature_4', 19287.846925710943), ('scale_4', 8.789579179194497e+22), ('extinction_av_4', 1.3413154796651707), ('extinction_rv_4', 3.9999999999694484), ('temperature_5', 18727.166029605913), ('scale_5', 9.227332082935665e+22), ('extinction_av_5', 1.3413154796651707), ('extinction_rv_5', 3.9999999999694484), ('temperature_6', 18446.243973738045), ('scale_6', 1.0591108204044878e+23), ('extinction_av_6', 1.3413154796651707), ('extinction_rv_6', 3.9999999999694484), ('temperature_7', 18483.400868530858), ('scale_7', 2.078587173833066e+23), ('extinction_av_7', 1.3413154796651707), ('extinction_rv_7', 3.9999999999694484)])
+
         print(parameters)
+
+        plotmag = False
 
         if self.plot:
 
@@ -132,23 +137,23 @@ class FitSpectrum:
 
                 flux_data = data[i]
                 flux_data_err = data_err[i]
-                freq_observed = const.c.value / (np.array(wl_observed) * 1e-10)
+
                 if fittype == "powerlaw":
                     spectrum = utilities.powerlaw_spectrum(
                         alpha=parameters[f"alpha_{i+1}"],
                         scale=parameters[f"scale_{i+1}"],
                         redshift=None,
                     )
-                plt.figure(figsize=(8, 0.75 * 8), dpi=300)
-                ax1 = plt.subplot(111)
-                ax1.set_ylim([2e-28, 4e-27])
-                ax1.set_xlim([3.5e14, 2e15])
-                plt.xscale("log")
-                plt.yscale("log")
-                ax1.errorbar(freq_observed, flux_data, flux_data_err, fmt=".")
-                ax1.plot(utilities.lambda_to_nu(np.array(spectrum.wave)), spectrum.flux)
-                plt.savefig(f"test_{i+1}.png")
-                plt.close()
+                else:
+                    spectrum = utilities.blackbody_spectrum(
+                        temperature=parameters[f"temperature_{i+1}"],
+                        scale=parameters[f"scale_{i+1}"],
+                        redshift=self.redshift,
+                        extinction_av = parameters[f"extinction_av_{i+1}"],
+                        extinction_rv = parameters[f"extinction_rv_{i+1}"],
+            )
+
+                plot.plot_sed_from_flux(flux=flux_data, bands=bands_to_fit, spectrum=spectrum, fittype=fittype, redshift=self.redshift, flux_err=flux_data_err, index=i, plotmag=False)
 
         if fittype == "powerlaw":
             return {"alpha": parameters["alpha_1"]}
@@ -206,6 +211,8 @@ class FitSpectrum:
             for i in range(ndata):
                 temperature = params[f"temperature_{i+1}"]
                 scale = params[f"scale_{i+1}"]
+                # extinction_av = 1.7
+                # extinction_rv = 3.1
                 extinction_av = params[f"extinction_av_{i+1}"]
                 extinction_rv = params[f"extinction_rv_{i+1}"]
 
@@ -257,7 +264,6 @@ class FitSpectrum:
                 return x ** (alpha) * b
 
         else:
-
             def func_powerlaw(x, a, b):
                 return x ** (-a) * b
 
@@ -291,7 +297,7 @@ class FitSpectrum:
                 "scale": scale,
                 "reduced_chisquare": reduced_chisquare,
             }
-            plot.plot_sed(magnitudes_outdict, spectrum, annotations)
+            plot.plot_sed_from_dict(magnitudes_outdict, spectrum, annotations)
 
         luminosity_uv_optical = utilities.calculate_luminosity(
             spectrum,
@@ -342,8 +348,8 @@ class FitSpectrum:
 
         # Now we construct the blackbody
         params = Parameters()
-        params.add("temp", value=30000, min=1000, max=180000)
-        params.add("scale", value=2e23, min=1e18, max=1e30)
+        params.add("temp", value=30000, min=1000, max=150000)
+        params.add("scale", value=1e23, min=1e22, max=1e25)
 
         x = wl_observed
         data = mags
@@ -388,7 +394,7 @@ class FitSpectrum:
                 "reduced_chisquare": reduced_chisquare,
                 "bolometric_luminosity": bolo_lumi,
             }
-            plot.plot_sed(magnitudes_outdict, spectrum, annotations)
+            plot.plot_sed_from_dict(magnitudes_outdict, spectrum, annotations)
 
         luminosity_uv_optical = utilities.calculate_luminosity(
             spectrum,
@@ -583,7 +589,7 @@ class FitSpectrum:
 #             "scale": scale,
 #         }
 
-#         plot.plot_sed(magnitudes_outdict, spectrum, annotations)
+#         plot.plot_sed_from_dict(magnitudes_outdict, spectrum, annotations)
 
 
 # for band in data:
