@@ -337,6 +337,31 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
                 color=cmap[key],
             )
 
+    if fittype == "powerlaw":
+        alphas = set()
+        for entry in fitparams:
+            alpha = fitparams[entry]["alpha"]
+            alphas.add(alpha)
+        if len(alphas) == 1:
+            plt.title(rf"$\alpha$ = {list(alphas)[0]:.2f}")
+
+    if fittype == "blackbody":
+        extinction_avs = set()
+        extinction_rvs = set()
+        for entry in fitparams:
+            av = fitparams[entry]["extinction_av"]
+            rv = fitparams[entry]["extinction_rv"]
+            extinction_avs.add(av)
+            extinction_rvs.add(rv)
+        title = ""
+        if len(extinction_avs) == 1:
+            title += f"extinction AV = {list(extinction_avs)[0]:.2f}"
+        if len(extinction_rvs) == 1:
+            title += f"  extinction RV = {list(extinction_rvs)[0]:.2f}"
+
+        if len(title) > 0:
+            plt.title(title)
+
     plt.legend(fontsize=ANNOTATION_FONTSIZE)
     plt.savefig(f"plots/lightcurve_{fittype}.png")
     plt.close()

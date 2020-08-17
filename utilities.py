@@ -119,18 +119,35 @@ def calculate_bolometric_luminosity(
 
 
 def powerlaw_spectrum(
-    alpha: float, scale: float, redshift: float = None,
+    alpha: float,
+    scale: float,
+    redshift: float = None,
+    extinction_av: float = None,
+    extinction_rv: float = None,
 ):
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
     if scale is None:
-        powerlaw_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s
+        flux_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s
     else:
-        powerlaw_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
+        flux_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
+
+    flux_lambda = flux_nu_to_lambda(flux_nu, wavelengths)
 
     spectrum_unreddened = sncosmo_spectral_v13.Spectrum(
-        wave=wavelengths, flux=powerlaw_nu, unit=FNU
+        wave=wavelengths, flux=flux_nu, unit=FNU
     )
+
+    if extinction_av is not None:
+        flux_lambda_reddened = apply(
+            ccm89(np.asarray(wavelengths), extinction_av, extinction_rv),
+            np.asarray(flux_lambda),
+        )
+
+        flux_nu_reddened = flux_lambda_to_nu(flux_lambda_reddened, wavelengths)
+        spectrum_reddened = sncosmo_spectral_v13.Spectrum(
+            wave=wavelengths, flux=flux_nu_reddened, unit=FNU
+        )
 
     if redshift is not None:
         spectrum_unreddened.z = 0

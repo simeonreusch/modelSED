@@ -67,11 +67,8 @@ class SED:
 
     def fit_one_bin(self, mags: dict, **kwargs):
         """ """
-        fit = FitSpectrum(mags, self.redshift)
-        if self.fittype == "blackbody":
-            fitresult = fit.fit_bin_blackbody(**kwargs)
-        if self.fittype == "powerlaw":
-            fitresult = fit.fit_bin_powerlaw(**kwargs)
+        fit = FitSpectrum(mags, self.fittype, self.redshift)
+        fitresult = fit.fit_bin(**kwargs)
 
         return fitresult
 
@@ -119,9 +116,11 @@ class SED:
                 slices.update({index: instrumentfilters})
         return slices
 
-    def fit_bins(self, **kwargs):
+    def fit_bins(self, min_values_per_bin: float = 2, **kwargs):
         """" """
         print(f"Fitting {self.nbins} time bins.\n")
+
+        print(f"Bands which are fitted: {kwargs['bands']}")
 
         if "bands" in kwargs:
             mean_mags = self.get_mean_magnitudes(bands=kwargs["bands"])
@@ -129,12 +128,16 @@ class SED:
             mean_mags = self.get_mean_magnitudes()
 
         fitparams = {}
-        i = 0
+
         progress_bar = ProgressBar(len(mean_mags))
 
+        # alpha_bound = -0.1
+        i = 0
         for index, entry in enumerate(mean_mags):
-            if len(mean_mags[entry]) > 2:
+            if len(mean_mags[entry]) > min_values_per_bin:
+                # kwargs["alpha_bound"] = alpha_bound
                 result = self.fit_one_bin(mean_mags[entry], **kwargs)
+                # alpha_bound = result["alpha"]
                 fitparams.update({i: result})
                 i += 1
             progress_bar.update(index)
@@ -208,13 +211,14 @@ bands_for_global_fit = [
 
 nbins = 30
 
-fittype = "powerlaw"
+fittype = "blackbody"
 
 sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
-sed.fit_global(bands=bands_for_global_fit)
+# sed.fit_global(bands=bands_for_global_fit)
 sed.load_global_fitparams()
 if fittype == "powerlaw":
-    sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
+    # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
+    sed.fit_bins(bands=bands_for_global_fit)
 else:
     sed.fit_bins(
         extinction_av=sed.fitparams_global["extinction_av"],
