@@ -116,16 +116,25 @@ class SED:
                 slices.update({index: instrumentfilters})
         return slices
 
-    def fit_bins(self, min_values_per_bin: float = 2, **kwargs):
+    def fit_bins(self, min_bands_per_bin: float = None, **kwargs):
         """" """
-        print(f"Fitting {self.nbins} time bins.\n")
 
-        print(f"Bands which are fitted: {kwargs['bands']}")
+        print(f"Fitting {self.nbins} time bins.\n")
 
         if "bands" in kwargs:
             mean_mags = self.get_mean_magnitudes(bands=kwargs["bands"])
+            if min_bands_per_bin is None:
+                min_bands_per_bin = len(kwargs["bands"])
+            print(f"Bands which are fitted: {kwargs['bands']}")
         else:
             mean_mags = self.get_mean_magnitudes()
+            if min_bands_per_bin is None:
+                min_bands_per_bin = 2
+            print(f"Fitting all bands")
+
+        print(
+            f"At least {min_bands_per_bin} bands must be present in each bin to be fit"
+        )
 
         fitparams = {}
 
@@ -134,7 +143,7 @@ class SED:
         # alpha_bound = -0.1
         i = 0
         for index, entry in enumerate(mean_mags):
-            if len(mean_mags[entry]) > min_values_per_bin:
+            if len(mean_mags[entry]) > min_bands_per_bin:
                 # kwargs["alpha_bound"] = alpha_bound
                 result = self.fit_one_bin(mean_mags[entry], **kwargs)
                 # alpha_bound = result["alpha"]
@@ -209,7 +218,7 @@ bands_for_global_fit = [
     "Swift_UVM2",
 ]
 
-nbins = 30
+nbins = 25
 
 fittype = "blackbody"
 
@@ -224,6 +233,7 @@ else:
         extinction_av=sed.fitparams_global["extinction_av"],
         extinction_rv=sed.fitparams_global["extinction_rv"],
         bands=bands_for_global_fit,
+        # min_bands_per_bin=4,
     )
 sed.load_fitparams()
 sed.plot_lightcurve(bands=bands_for_global_fit)

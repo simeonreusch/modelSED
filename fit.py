@@ -132,11 +132,6 @@ class FitSpectrum:
         report_fit(out.params)
         parameters = out.params.valuesdict()
 
-        # fixed av and rv
-        # parameters = collections.OrderedDict([('temperature_1', 21758.158194145955), ('scale_1', 1.2322212219774704e+23), ('extinction_av_1', 1.3413154796651707), ('extinction_rv_1', 3.9999999999694484), ('temperature_2', 18802.366783301), ('scale_2', 9.04511248692439e+22), ('extinction_av_2', 1.3413154796651707), ('extinction_rv_2', 3.9999999999694484), ('temperature_3', 19550.937733108974), ('scale_3', 9.379462638260712e+22), ('extinction_av_3', 1.3413154796651707), ('extinction_rv_3', 3.9999999999694484), ('temperature_4', 19287.846925710943), ('scale_4', 8.789579179194497e+22), ('extinction_av_4', 1.3413154796651707), ('extinction_rv_4', 3.9999999999694484), ('temperature_5', 18727.166029605913), ('scale_5', 9.227332082935665e+22), ('extinction_av_5', 1.3413154796651707), ('extinction_rv_5', 3.9999999999694484), ('temperature_6', 18446.243973738045), ('scale_6', 1.0591108204044878e+23), ('extinction_av_6', 1.3413154796651707), ('extinction_rv_6', 3.9999999999694484), ('temperature_7', 18483.400868530858), ('scale_7', 2.078587173833066e+23), ('extinction_av_7', 1.3413154796651707), ('extinction_rv_7', 3.9999999999694484)])
-
-        print(parameters)
-
         plotmag = False
 
         if self.plot:
