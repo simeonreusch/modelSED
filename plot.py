@@ -297,13 +297,12 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
     for entry in fitparams:
 
         if fittype == "powerlaw":
-            nu = (
-                (frequencies ** fitparams[entry]["alpha"] * fitparams[entry]["scale"])
-                * u.erg
-                / u.cm ** 2
-                * u.Hz
-                / u.s
-            )
+            alpha = fitparams[entry]["alpha"]
+            alpha_err = fitparams[entry]["alpha_err"]
+            scale = fitparams[entry]["scale"]
+            scale_err = fitparams[entry]["scale_err"]
+            nu = (frequencies ** alpha * scale) * u.erg / u.cm ** 2 * u.Hz / u.s
+            nu_err = None
             spectrum = sncosmo_spectral_v13.Spectrum(
                 wave=wavelengths, flux=nu, unit=utilities.FNU
             )

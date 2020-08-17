@@ -194,6 +194,11 @@ class FitSpectrum:
             else:
                 alpha = None
 
+            if "alpha_err" in kwargs.keys():
+                alpha_err = kwargs["alpha_err"]
+            else:
+                alpha_err = None
+
         else:
             if "extinction_av" in kwargs.keys():
                 extinction_av = kwargs["extinction_av"]
@@ -302,6 +307,8 @@ class FitSpectrum:
                 }
                 if alpha is not None:
                     annotations.update({"alpha": alpha})
+                    if alpha_err is not None:
+                        annotations.update({"alpha_err": alpha_err})
                 else:
                     annotations.update(
                         {
@@ -347,6 +354,8 @@ class FitSpectrum:
                 returndict.update({"alpha": alpha})
             else:
                 returndict.update({"alpha": parameters["alpha"]})
+            if alpha_err is not None:
+                returndict.update({"alpha_err": alpha_err})
             return returndict
 
         else:

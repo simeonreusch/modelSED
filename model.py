@@ -234,7 +234,7 @@ if __name__ == "__main__":
 
     fittype = "powerlaw"
     fitglobal = False
-    fitlocal = True
+    fitlocal = False
 
     sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
     if fitglobal:
@@ -245,6 +245,7 @@ if __name__ == "__main__":
             # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
             sed.fit_bins(
                 alpha=sed.fitparams_global["alpha"],
+                alpha_err=sed.fitparams_global["alpha_err"],
                 bands=bands_for_global_fit,
                 min_bands_per_bin=2,
                 # neccessary_bands=["Swift_UVM2"],
