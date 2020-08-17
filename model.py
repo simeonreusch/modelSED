@@ -116,7 +116,9 @@ class SED:
                 slices.update({index: instrumentfilters})
         return slices
 
-    def fit_bins(self, min_bands_per_bin: float = None, **kwargs):
+    def fit_bins(
+        self, min_bands_per_bin: float = None, neccessary_bands: list = None, **kwargs
+    ):
         """" """
 
         print(f"Fitting {self.nbins} time bins.\n")
@@ -136,6 +138,9 @@ class SED:
             f"At least {min_bands_per_bin} bands must be present in each bin to be fit"
         )
 
+        if neccessary_bands:
+            print(f"{neccessary_bands} must be present in each bin to be fit")
+
         fitparams = {}
 
         progress_bar = ProgressBar(len(mean_mags))
@@ -144,11 +149,16 @@ class SED:
         i = 0
         for index, entry in enumerate(mean_mags):
             if len(mean_mags[entry]) > min_bands_per_bin:
-                # kwargs["alpha_bound"] = alpha_bound
-                result = self.fit_one_bin(mean_mags[entry], **kwargs)
-                # alpha_bound = result["alpha"]
-                fitparams.update({i: result})
-                i += 1
+                if neccessary_bands:
+                    if all(band in mean_mags[entry] for band in neccessary_bands):
+                        result = self.fit_one_bin(mean_mags[entry], **kwargs)
+                        fitparams.update({i: result})
+                        i += 1
+                else:
+                    result = self.fit_one_bin(mean_mags[entry], **kwargs)
+                    fitparams.update({i: result})
+                    i += 1
+
             progress_bar.update(index)
         progress_bar.update(len(mean_mags))
 
@@ -207,34 +217,45 @@ class SED:
         self.fitparams_global = fitparams_global
 
 
-redshift = 0.2666
+if __name__ == "__main__":
 
-bands_for_global_fit = [
-    "P48+ZTF_g",
-    "P48+ZTF_r",
-    "P48+ZTF_i",
-    # "Swift_UVW2",
-    # "Swift_UVW1",
-    "Swift_UVM2",
-]
+    redshift = 0.2666
 
-nbins = 25
+    bands_for_global_fit = [
+        "P48+ZTF_g",
+        "P48+ZTF_r",
+        "P48+ZTF_i",
+        # "Swift_UVW2",
+        # "Swift_UVW1",
+        "Swift_UVM2",
+    ]
 
-fittype = "blackbody"
+    nbins = 80
 
-sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
-# sed.fit_global(bands=bands_for_global_fit)
-sed.load_global_fitparams()
-if fittype == "powerlaw":
-    # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
-    sed.fit_bins(bands=bands_for_global_fit)
-else:
-    sed.fit_bins(
-        extinction_av=sed.fitparams_global["extinction_av"],
-        extinction_rv=sed.fitparams_global["extinction_rv"],
-        bands=bands_for_global_fit,
-        # min_bands_per_bin=4,
-    )
-sed.load_fitparams()
-sed.plot_lightcurve(bands=bands_for_global_fit)
-sed.plot_luminosity()
+    fittype = "powerlaw"
+    fitglobal = False
+    fitlocal = True
+
+    sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
+    if fitglobal:
+        sed.fit_global(bands=bands_for_global_fit)
+    sed.load_global_fitparams()
+    if fitlocal:
+        if fittype == "powerlaw":
+            # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
+            sed.fit_bins(
+                bands=bands_for_global_fit,
+                min_bands_per_bin=3,
+                neccessary_bands=["Swift_UVM2"],
+            )
+        else:
+            sed.fit_bins(
+                extinction_av=sed.fitparams_global["extinction_av"],
+                extinction_rv=sed.fitparams_global["extinction_rv"],
+                bands=bands_for_global_fit,
+                min_bands_per_bin=3,
+                neccessary_bands=["Swift_UVM2"],
+            )
+    sed.load_fitparams()
+    sed.plot_lightcurve(bands=bands_for_global_fit)
+    sed.plot_luminosity()

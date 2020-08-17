@@ -278,11 +278,12 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             df = lc.query(
                 f"instrument == '{instrumentfilter[0]}' and filter == '{instrumentfilter[1]}'"
             )
-            ax1.scatter(
+            ax1.errorbar(
                 df.mjd,
                 df.magpsf,
+                df.sigmamagpsf,
                 color=cmap[key],
-                marker=".",
+                fmt=".",
                 alpha=0.5,
                 edgecolors=None,
                 label=filterlabel[key],
