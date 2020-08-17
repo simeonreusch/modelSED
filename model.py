@@ -230,7 +230,7 @@ if __name__ == "__main__":
         "Swift_UVM2",
     ]
 
-    nbins = 80
+    nbins = 60
 
     fittype = "powerlaw"
     fitglobal = False
@@ -244,9 +244,11 @@ if __name__ == "__main__":
         if fittype == "powerlaw":
             # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
             sed.fit_bins(
+                alpha=sed.fitparams_global["alpha"],
                 bands=bands_for_global_fit,
-                min_bands_per_bin=3,
-                neccessary_bands=["Swift_UVM2"],
+                min_bands_per_bin=2,
+                # neccessary_bands=["Swift_UVM2"],
+                verbose=True,
             )
         else:
             sed.fit_bins(
@@ -255,6 +257,7 @@ if __name__ == "__main__":
                 bands=bands_for_global_fit,
                 min_bands_per_bin=3,
                 neccessary_bands=["Swift_UVM2"],
+                verbose=True,
             )
     sed.load_fitparams()
     sed.plot_lightcurve(bands=bands_for_global_fit)

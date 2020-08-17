@@ -284,7 +284,7 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
                 df.sigmamagpsf,
                 color=cmap[key],
                 fmt=".",
-                alpha=0.5,
+                alpha=0.2,
                 edgecolors=None,
                 label=filterlabel[key],
             )

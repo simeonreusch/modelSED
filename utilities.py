@@ -79,7 +79,10 @@ def magnitude_in_band(band: str, spectrum):
 
 def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float):
     """ """
-    full_spectrum = spectrum
+    # First we redshift the spectrum
+    spectrum.z = 0
+    spectrum_redshifted = spectrum.redshifted_to(redshift, cosmo=cosmo)
+    full_spectrum = spectrum_redshifted
     full_wavelength = full_spectrum._wave
     full_flux = full_spectrum._flux
 

@@ -249,13 +249,24 @@ class FitSpectrum:
             minimizer_fcn, params, fcn_args=(x, data), fcn_kws=fcn_kws,
         )
 
-        result = minimizer.minimize()
-        parameters = result.params.valuesdict()
+        out = minimizer.minimize()
+
+        if "verbose" in kwargs:
+            if kwargs["verbose"]:
+                print(report_fit(out.params))
+                print(f"reduced chisquare: {out.redchi}")
+
+        parameters = out.params.valuesdict()
 
         if self.fittype == "powerlaw":
-            spectrum = utilities.powerlaw_spectrum(
-                alpha=parameters["alpha"], scale=parameters["scale"],
-            )
+            if alpha is not None:
+                spectrum = utilities.powerlaw_spectrum(
+                    alpha=alpha, scale=parameters["scale"],
+                )
+            else:
+                spectrum = utilities.powerlaw_spectrum(
+                    alpha=parameters["alpha"], scale=parameters["scale"],
+                )
 
         else:
             spectrum, bolometric_flux_unscaled = utilities.blackbody_spectrum(
@@ -286,10 +297,18 @@ class FitSpectrum:
             if self.fittype == "powerlaw":
                 annotations = {
                     "mjd": self.magnitudes["mjd"],
-                    "alpha": parameters["alpha"],
                     "scale": parameters["scale"],
                     "reduced_chisquare": reduced_chisquare,
                 }
+                if alpha is not None:
+                    annotations.update({"alpha": alpha})
+                else:
+                    annotations.update(
+                        {
+                            "alpha": parameters["alpha"],
+                            "alpha_err": out.params["alpha"].stderr,
+                        }
+                    )
 
             else:
                 annotations = {
@@ -315,14 +334,20 @@ class FitSpectrum:
         )
 
         if self.fittype == "powerlaw":
-            return {
-                "alpha": parameters["alpha"],
+            returndict = {
                 "scale": parameters["scale"],
+                "scale_err": out.params["scale"].stderr,
                 "mjd": self.magnitudes["mjd"],
                 "red_chisq": reduced_chisquare,
+                "red_chisq_binfit": out.redchi,
                 "luminosity_uv_optical": luminosity_uv_optical.value,
                 "luminosity_uv_nir": luminosity_uv_nir.value,
             }
+            if alpha is not None:
+                returndict.update({"alpha": alpha})
+            else:
+                returndict.update({"alpha": parameters["alpha"]})
+            return returndict
 
         else:
             return {
@@ -332,6 +357,7 @@ class FitSpectrum:
                 "extinction_rv": extinction_rv,
                 "mjd": self.magnitudes["mjd"],
                 "red_chisq": reduced_chisquare,
+                "red_chisq_binfit": out.redchi,
                 "luminosity_uv_optical": luminosity_uv_optical.value,
                 "luminosity_uv_nir": luminosity_uv_nir.value,
                 "bolometric_luminosity": bolo_lumi.value,
