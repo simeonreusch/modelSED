@@ -301,10 +301,21 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             alpha_err = fitparams[entry]["alpha_err"]
             scale = fitparams[entry]["scale"]
             scale_err = fitparams[entry]["scale_err"]
-            nu = (frequencies ** alpha * scale) * u.erg / u.cm ** 2 * u.Hz / u.s
-            nu_err = None
+            flux_nu = (frequencies ** alpha * scale) * u.erg / u.cm ** 2 * u.Hz / u.s
+            flux_nu_err = utilities.powerlaw_error_prop(
+                frequencies, alpha, alpha_err, scale, scale_err
+            )
+            print(flux_nu)
+            print(flux_nu_err)
+            quit()
             spectrum = sncosmo_spectral_v13.Spectrum(
-                wave=wavelengths, flux=nu, unit=utilities.FNU
+                wave=wavelengths, flux=flux_nu, unit=utilities.FNU
+            )
+            spectrum_upper = sncosmo_spectral_v13.Spectrum(
+                wave=wavelengths, flux=(flux_nu + flux_nu_err), unit=utilities.FNU
+            )
+            spectrum_lower = sncosmo_spectral_v13.Spectrum(
+                wave=wavelengths, flux=(flux_nu - flux_nu_err), unit=utilities.FNU
             )
 
         if fittype == "blackbody":
@@ -319,8 +330,16 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
         for band in filter_wl.keys():
             if not band in exclude_bands:
                 mag = utilities.magnitude_in_band(band, spectrum)
+                mag_upper = utilities.magnitude_in_band(band, spectrum_upper)
+                mag_lower = utilities.magnitude_in_band(band, spectrum_lower)
                 df_model = df_model.append(
-                    {"mjd": fitparams[entry]["mjd"], "band": band, "mag": mag},
+                    {
+                        "mjd": fitparams[entry]["mjd"],
+                        "band": band,
+                        "mag": mag,
+                        "mag_upper": mag_upper,
+                        "mag_lower": mag_lower,
+                    },
                     ignore_index=True,
                 )
 
@@ -330,11 +349,36 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             spline = UnivariateSpline(
                 df_model_band.mjd.values, df_model_band.mag.values
             )
+            spline_upper = UnivariateSpline(
+                df_model_band.mjd.values, df_model_band.mag_upper.values
+            )
+            spline_lower = UnivariateSpline(
+                df_model_band.mjd.values, df_model_band.mag_lower.values
+            )
             spline.set_smoothing_factor(0.001)
+            spline_upper.set_smoothing_factor(0.001)
+            spline_lower.set_smoothing_factor(0.001)
             ax1.plot(
                 df_model_band.mjd.values,
                 spline(df_model_band.mjd.values),
                 color=cmap[key],
+            )
+            # ax1.plot(
+            #     df_model_band.mjd.values,
+            #     spline_upper(df_model_band.mjd.values),
+            #     color=cmap[key],
+            # )
+            # ax1.plot(
+            #     df_model_band.mjd.values,
+            #     spline_lower(df_model_band.mjd.values),
+            #     color=cmap[key],
+            # )
+            ax1.fill_between(
+                df_model_band.mjd.values,
+                spline_lower(df_model_band.mjd.values),
+                spline_upper(df_model_band.mjd.values),
+                color=cmap[key],
+                alpha=0.2,
             )
 
     if fittype == "powerlaw":

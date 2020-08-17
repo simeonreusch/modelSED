@@ -165,6 +165,25 @@ def powerlaw_spectrum(
     return outspectrum
 
 
+def powerlaw_error_prop(
+    frequency, alpha, alpha_err, scale, scale_err, nu_or_lambda: str = "nu"
+):
+    """ """
+    nu = frequency ** alpha * scale
+    print(nu)
+    print(nu * np.log(frequency))
+    first_term = (nu * np.log(frequency)) ** 2 * alpha_err ** 2
+    second_term = (frequency ** alpha) ** 2 * scale_err ** 2
+    flux_err = np.sqrt(first_term + second_term)
+    if nu_or_lambda == "nu":
+        return flux_err * u.erg / u.cm ** 2 * u.Hz / u.s
+    elif nu_or_lambda == "lambda":
+        print("OOOPS, NOT IMPLEMENTED YET")
+        return 0
+    else:
+        raise ValueError("nu_or_lambda has to be 'nu' or 'lambda'")
+
+
 def blackbody_spectrum(
     temperature: float,
     scale: float,
