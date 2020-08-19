@@ -176,7 +176,7 @@ class SED:
         else:
             mean_mags = self.get_mean_magnitudes()
 
-        fit = FitSpectrum(mean_mags, redshift=self.redshift)
+        fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift)
 
         if "bands" in kwargs:
             bands = kwargs["bands"]
@@ -184,7 +184,7 @@ class SED:
             bands = None
 
         result = fit.fit_global_parameters(
-            magnitudes=mean_mags, fittype=self.fittype, min_datapoints=len(bands),
+            magnitudes=mean_mags, min_datapoints=len(bands),
         )
 
         with open(
@@ -233,8 +233,8 @@ if __name__ == "__main__":
     nbins = 60
 
     fittype = "powerlaw"
-    fitglobal = False
-    fitlocal = False
+    fitglobal = True
+    fitlocal = True
 
     sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
     if fitglobal:
@@ -254,7 +254,9 @@ if __name__ == "__main__":
         else:
             sed.fit_bins(
                 extinction_av=sed.fitparams_global["extinction_av"],
+                extinction_av_err=sed.fitparams_global["extinction_av_err"],
                 extinction_rv=sed.fitparams_global["extinction_rv"],
+                extinction_rv_err=sed.fitparams_global["extinction_rv_err"],
                 bands=bands_for_global_fit,
                 min_bands_per_bin=3,
                 neccessary_bands=["Swift_UVM2"],

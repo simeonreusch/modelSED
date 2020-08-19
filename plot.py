@@ -148,7 +148,18 @@ def plot_sed_from_dict(
         plt.yscale("log")
         ax1.set_ylim([2e-28, 4e-27])
         ax1.set_xlim([3.5e14, 2e15])
+        if "alpha" in annotations.keys():
+            alpha = annotations["alpha"]
+        if "alpha_err" in annotations.keys():
+            alpha_err = annotations["alpha_err"]
+        scale = annotations["scale"]
+        scale_err = annotations["scale_err"]
+        flux_err = utilities.powerlaw_error_prop(
+            frequencies.value, alpha, alpha_err, scale, scale_err
+        )
+
         ax1.plot(frequencies.value, spectrum._flux)
+        # ax1.plot(frequencies.value, spectrum._flux+flux_err.value)
         for key in mags.keys():
             mag = mags[key]["observed"]
             mag_err = mags[key]["observed_err"]
@@ -167,6 +178,7 @@ def plot_sed_from_dict(
         ax1.invert_yaxis()
         ax1.set_ylim([21, 17])
         ax1.plot(spectrum.wave, spectrum_mags)
+
         for key in mags.keys():
             ax1.scatter(filter_wl[key], mags[key]["observed"], color=cmap[key])
         ax2 = ax1.secondary_xaxis(
@@ -305,9 +317,6 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             flux_nu_err = utilities.powerlaw_error_prop(
                 frequencies, alpha, alpha_err, scale, scale_err
             )
-            print(flux_nu)
-            print(flux_nu_err)
-            quit()
             spectrum = sncosmo_spectral_v13.Spectrum(
                 wave=wavelengths, flux=flux_nu, unit=utilities.FNU
             )
@@ -330,15 +339,15 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
         for band in filter_wl.keys():
             if not band in exclude_bands:
                 mag = utilities.magnitude_in_band(band, spectrum)
-                mag_upper = utilities.magnitude_in_band(band, spectrum_upper)
-                mag_lower = utilities.magnitude_in_band(band, spectrum_lower)
+                # mag_upper = utilities.magnitude_in_band(band, spectrum_upper)
+                # mag_lower = utilities.magnitude_in_band(band, spectrum_lower)
                 df_model = df_model.append(
                     {
                         "mjd": fitparams[entry]["mjd"],
                         "band": band,
                         "mag": mag,
-                        "mag_upper": mag_upper,
-                        "mag_lower": mag_lower,
+                        # "mag_upper": mag_upper,
+                        # "mag_lower": mag_lower,
                     },
                     ignore_index=True,
                 )
@@ -349,15 +358,15 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             spline = UnivariateSpline(
                 df_model_band.mjd.values, df_model_band.mag.values
             )
-            spline_upper = UnivariateSpline(
-                df_model_band.mjd.values, df_model_band.mag_upper.values
-            )
-            spline_lower = UnivariateSpline(
-                df_model_band.mjd.values, df_model_band.mag_lower.values
-            )
+            # spline_upper = UnivariateSpline(
+            #     df_model_band.mjd.values, df_model_band.mag_upper.values
+            # )
+            # spline_lower = UnivariateSpline(
+            #     df_model_band.mjd.values, df_model_band.mag_lower.values
+            # )
             spline.set_smoothing_factor(0.001)
-            spline_upper.set_smoothing_factor(0.001)
-            spline_lower.set_smoothing_factor(0.001)
+            # spline_upper.set_smoothing_factor(0.001)
+            # spline_lower.set_smoothing_factor(0.001)
             ax1.plot(
                 df_model_band.mjd.values,
                 spline(df_model_band.mjd.values),
@@ -373,13 +382,13 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             #     spline_lower(df_model_band.mjd.values),
             #     color=cmap[key],
             # )
-            ax1.fill_between(
-                df_model_band.mjd.values,
-                spline_lower(df_model_band.mjd.values),
-                spline_upper(df_model_band.mjd.values),
-                color=cmap[key],
-                alpha=0.2,
-            )
+            # ax1.fill_between(
+            #     df_model_band.mjd.values,
+            #     spline_lower(df_model_band.mjd.values),
+            #     spline_upper(df_model_band.mjd.values),
+            #     color=cmap[key],
+            #     alpha=0.2,
+            # )
 
     if fittype == "powerlaw":
         alphas = set()

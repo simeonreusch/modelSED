@@ -203,6 +203,8 @@ class FitSpectrum:
             if "extinction_av" in kwargs.keys():
                 extinction_av = kwargs["extinction_av"]
                 extinction_rv = kwargs["extinction_rv"]
+                extinction_av_err = kwargs["extinction_av_err"]
+                extinction_rv_err = kwargs["extinction_rv_err"]
             else:
                 extinction_av = None
                 extinction_rv = None
@@ -303,6 +305,7 @@ class FitSpectrum:
                 annotations = {
                     "mjd": self.magnitudes["mjd"],
                     "scale": parameters["scale"],
+                    "scale_err": out.params["scale"].stderr,
                     "reduced_chisquare": reduced_chisquare,
                 }
                 if alpha is not None:
@@ -361,7 +364,9 @@ class FitSpectrum:
         else:
             return {
                 "temperature": parameters["temp"],
+                "temperature_err": out.params["temp"].stderr,
                 "scale": parameters["scale"],
+                "scale_err": out.params["scale"].stderr,
                 "extinction_av": extinction_av,
                 "extinction_rv": extinction_rv,
                 "mjd": self.magnitudes["mjd"],
