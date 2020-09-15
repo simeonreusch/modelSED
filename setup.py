@@ -89,7 +89,6 @@ if __name__ == "__main__":
         version=VERSION,
         download_url=DOWNLOAD_URL,
         install_requires=install_requires,
-        scripts=["bin/forcephoto.py"],
         packages=packages,
         include_package_data=True,
         # package_data={'pysedm': ['data/*.*']},
