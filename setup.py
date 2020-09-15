@@ -1,13 +1,13 @@
 DESCRIPTION = "Fits SED to data (blackbody, powerlaw)"
 LONG_DESCRIPTION = """ SED modeling to existing data with blackbody and powerlaw"""
 
-DISTNAME = "model_sed"
+DISTNAME = "modelSED"
 AUTHOR = "Simeon Reusch"
 MAINTAINER = "Simeon Reusch"
 MAINTAINER_EMAIL = "simeon.reusch@desy.de"
-URL = "https://github.com/simeonreusch/model_sed/"
+URL = "https://github.com/simeonreusch/modelSED/"
 LICENSE = "BSD (3-clause)"
-DOWNLOAD_URL = "https://github.com/simeonreusch/model_sed/archive/v0.1-alpha.tar.gz"
+DOWNLOAD_URL = "https://github.com/simeonreusch/modelSED/archive/v0.1-alpha.tar.gz"
 VERSION = "0.1-alpha"
 
 try:
