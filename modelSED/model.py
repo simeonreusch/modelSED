@@ -146,7 +146,7 @@ class SED:
         i = 0
         for index, entry in enumerate(mean_mags):
             if len(mean_mags[entry]) > min_bands_per_bin:
-                if neccessary_bands:# and mean_mags[entry]["mjd"] > 58670:
+                if neccessary_bands:  # and mean_mags[entry]["mjd"] > 58670:
                     if all(band in mean_mags[entry] for band in neccessary_bands):
                         result = self.fit_one_bin(mean_mags[entry], **kwargs)
                         fitparams.update({i: result})
@@ -174,7 +174,12 @@ class SED:
             mean_mags = self.get_mean_magnitudes()
 
         if "plot" in kwargs:
-            fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift, plot=kwargs["plot"])
+            fit = FitSpectrum(
+                mean_mags,
+                fittype=self.fittype,
+                redshift=self.redshift,
+                plot=kwargs["plot"],
+            )
         else:
             fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift)
 
@@ -184,8 +189,7 @@ class SED:
             bands = None
 
         result = fit.fit_global_parameters(
-            magnitudes=mean_mags,
-            min_datapoints=len(bands),
+            magnitudes=mean_mags, min_datapoints=len(bands),
         )
 
         with open(
@@ -229,8 +233,8 @@ if __name__ == "__main__":
         "P48+ZTF_g",
         "P48+ZTF_r",
         "P48+ZTF_i",
-      #  "Swift_UVW2",
-       # "Swift_UVW1",
+        #  "Swift_UVW2",
+        # "Swift_UVW1",
         "Swift_UVM2",
     ]
     with_p200 = [

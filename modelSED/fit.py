@@ -106,14 +106,12 @@ class FitSpectrum:
 
             for i in range(2, len(data) + 1, 1):
                 fit_params[f"alpha_{i}"].expr = "alpha_1"
-                
+
             fcn_kws = {"fittype": self.fittype}
 
         else:
             for iy, y in enumerate(data):
-                fit_params.add(
-                    f"temperature_{iy+1}", value=30000, min=1000, max=150000
-                )
+                fit_params.add(f"temperature_{iy+1}", value=30000, min=1000, max=150000)
                 fit_params.add(f"scale_{iy+1}", value=1e23, min=1e20, max=1e25)
                 fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=0, max=3.5)
                 fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=0, max=4)
@@ -123,7 +121,6 @@ class FitSpectrum:
                 fit_params[f"extinction_rv_{i}"].expr = "extinction_rv_1"
 
             fcn_kws = {"fittype": self.fittype, "redshift": self.redshift}
-
 
         minimizer = Minimizer(
             self._global_minimizer,

@@ -31,7 +31,7 @@ def plot_sed_from_flux(
     plotmag: bool = False,
 ):
     """ """
-    
+
     outpath = os.path.join("plots", "global", fittype)
 
     if not os.path.exists(outpath):
@@ -174,14 +174,19 @@ def plot_sed_from_dict(
         ax1.plot(frequencies.value, spectrum._flux, color="black")
         # ugly hack
         # ax1.plot(frequencies.value, bb_spectrum._flux, color="blue")
-        # 
+        #
         for key in mags.keys():
             mag = mags[key]["observed"]
             mag_err = mags[key]["observed_err"]
             flux = utilities.abmag_to_flux(mag)
             flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)
             ax1.errorbar(
-                mags[key]["frequency"], flux, flux_err, color=cmap[key], fmt=".", label=filterlabel[key]
+                mags[key]["frequency"],
+                flux,
+                flux_err,
+                color=cmap[key],
+                fmt=".",
+                label=filterlabel[key],
             )
         ax2 = ax1.secondary_xaxis(
             "top", functions=(utilities.lambda_to_nu, utilities.nu_to_lambda)
@@ -304,11 +309,11 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         ax2 = ax1.twinx()
         plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
         ax2.set_ylabel("Blackbody radius [m]")
-        plots = plot1+plot2
+        plots = plot1 + plot2
         labels = [p.get_label() for p in plots]
         # ax1.legend(plots, labels, loc=0)
-        ax2.yaxis.label.set_color('red')
-        ax1.yaxis.label.set_color('blue')
+        ax2.yaxis.label.set_color("red")
+        ax1.yaxis.label.set_color("blue")
         # ax2.tick_params(axis='y', colors='red')
         # ax1.tick_params(axis='y', colors='blue')
         # ax2.spines['right'].set_color('red')
@@ -318,7 +323,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
         ax1.legend()
-    
+
     plt.savefig(f"plots/luminosity_{fittype}.png")
     plt.close()
 
@@ -459,7 +464,9 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
             alphas.add(alpha)
             alpha_errs.add(alpha_err)
         if len(alphas) == 1:
-            plt.title(f"Spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}")
+            plt.title(
+                f"Spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}"
+            )
 
     if fittype == "blackbody":
         extinction_avs = set()
@@ -488,6 +495,7 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
     plt.savefig(f"plots/lightcurve_{fittype}.png")
     plt.close()
 
+
 def plot_temperature(fitparams, **kwargs):
     """ """
     plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
@@ -496,7 +504,7 @@ def plot_temperature(fitparams, **kwargs):
     ax1.set_xlabel("MJD")
     ax2 = ax1.twinx()
     ax2.set_ylabel("Radius")
-    
+
     mjds = []
     temps = []
     radii = []

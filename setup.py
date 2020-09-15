@@ -90,10 +90,16 @@ if __name__ == "__main__":
         download_url=DOWNLOAD_URL,
         install_requires=install_requires,
         packages=packages,
-        #include_package_data=True,
-        #package_data={'pysedm': ['data/*.*']},
-        #package_data={'instrument_data': ['instrument_data/*']},
-        package_data={"modelSED": ["instrument_data/*.json", "instrument_data/bandpasses/csv/*.csv", "instrument_data/bandpasses/dat/*.dat"]},
+        # include_package_data=True,
+        # package_data={'pysedm': ['data/*.*']},
+        # package_data={'instrument_data': ['instrument_data/*']},
+        package_data={
+            "modelSED": [
+                "instrument_data/*.json",
+                "instrument_data/bandpasses/csv/*.csv",
+                "instrument_data/bandpasses/dat/*.dat",
+            ]
+        },
         classifiers=[
             "Intended Audience :: Science/Research",
             "Programming Language :: Python :: 3.7",

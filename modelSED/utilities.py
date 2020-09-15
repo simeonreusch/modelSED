@@ -24,14 +24,17 @@ def flux_to_abmag(flux_nu, flux_nu_zp=48.585):
     flux_nu_zp = np.asarray(flux_nu_zp, dtype=float)
     return (-2.5 * np.log10(np.asarray(flux_nu))) - flux_nu_zp
 
+
 def flux_err_to_abmag_err(flux_nu, flux_nu_err):
     return 1.08574 / flux_nu * flux_nu_err
+
 
 def abmag_to_flux(abmag, magzp=48.585):
     magzp = np.asarray(magzp, dtype=float)
     abmag = np.asarray(abmag, dtype=float)
     flux = np.power(10, (-(abmag + magzp) / 2.5))
     return flux
+
 
 def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
     abmag = np.asarray(abmag, dtype=float)
@@ -46,7 +49,7 @@ def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
         sigma_f = np.sqrt(del_f ** 2 * (abmag_err + magzp_err) ** 2)
     return sigma_f
 
-    
+
 def lambda_to_nu(wavelength):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
