@@ -75,6 +75,10 @@ def magnitude_in_band(band: str, spectrum):
     zpbandfluxnames = load_info_json("zpbandfluxnames")
     additional_bands = load_info_json("additional_bands")
 
+    # for bandpassfile in bandpassfiles:
+    #     full_path_file = os.path.join(CURRENT_FILE_DIR, bandpassfile)
+    #     bandpassfiles.update(bandpassfile: full_path_file)
+
     for bandname in additional_bands.keys():
         fname = additional_bands[bandname]
         b = np.loadtxt(fname)
