@@ -93,7 +93,7 @@ if __name__ == "__main__":
         #include_package_data=True,
         #package_data={'pysedm': ['data/*.*']},
         #package_data={'instrument_data': ['instrument_data/*']},
-        package_data={"modelSED": ["instrument_data/*.json", "instrument_data/*.csv", "instrument_data/*.dat"]},
+        package_data={"modelSED": ["instrument_data/*.json", "instrument_data/bandpasses/csv/*.csv", "instrument_data/bandpasses/dat/*.dat"]},
         classifiers=[
             "Intended Audience :: Science/Research",
             "Programming Language :: Python :: 3.7",
