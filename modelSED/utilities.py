@@ -15,7 +15,7 @@ from . import sncosmo_spectral_v13
 FNU = u.erg / (u.cm ** 2 * u.s * u.Hz)
 FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 
-INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join({__file__}), "instrument_data")
+INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "instrument_data"))
 
 
 def flux_to_abmag(fluxnu):
