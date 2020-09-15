@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy import constants as const
 from astropy.utils.console import ProgressBar
-from fit import FitSpectrum
+from .fit import FitSpectrum
 from . import utilities, plot, sncosmo_spectral_v13
 
 FIG_WIDTH = 8
