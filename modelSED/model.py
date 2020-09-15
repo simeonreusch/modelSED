@@ -9,11 +9,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy import constants as const
-import sncosmo_spectral_v13
 from astropy.utils.console import ProgressBar
 from fit import FitSpectrum
-import utilities
-import plot
+from . import utilities, plot, sncosmo_spectral_v13
 
 FIG_WIDTH = 8
 FONTSIZE = 10

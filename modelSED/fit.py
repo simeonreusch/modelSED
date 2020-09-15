@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 from astropy import constants as const
 from scipy.optimize import curve_fit, OptimizeWarning
 from astropy.cosmology import Planck15 as cosmo
-import sncosmo_spectral_v13
-import utilities, plot
+from . import utilities, plot, sncosmo_spectral_v13
 from lmfit import Model, Parameters, Minimizer, report_fit, minimize
 
 

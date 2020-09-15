@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from astropy import constants as const
 from scipy.interpolate import UnivariateSpline
-import utilities, sncosmo_spectral_v13
+from . import utilities, sncosmo_spectral_v13
 
 FIG_WIDTH = 8
 FONTSIZE = 10
