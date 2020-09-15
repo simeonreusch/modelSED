@@ -92,7 +92,7 @@ if __name__ == "__main__":
         packages=packages,
         include_package_data=True,
         #package_data={'pysedm': ['data/*.*']},
-        package_data={"instrument_data": ["instrument_data/*"]},
+        package_data={'instrument_data': ['instrument_data/*']},
         classifiers=[
             "Intended Audience :: Science/Research",
             "Programming Language :: Python :: 3.7",
