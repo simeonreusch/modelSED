@@ -25,15 +25,26 @@ def flux_to_abmag(fluxnu):
 def flux_err_to_abmag_err(fluxnu, fluxerr_nu):
     return 1.08574 / fluxnu * fluxerr_nu
 
+def abmag_to_flux(abmag, magzp=48.585):
+    magzp = np.asarray(magzp, dtype=float)
+    abmag = np.asarray(abmag, dtype=float)
+    flux = np.power(10, (-(abmag + magzp) / 2.5))
+    return flux
 
-def abmag_to_flux(abmag):
-    return np.power(10, (-(np.asarray(abmag) + 48.585) / 2.5))
+def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
+    abmag = np.asarray(abmag, dtype=float)
+    abmag_err = np.asarray(abmag_err, dtype=float)
+    if magzp is not None:
+        magzp = np.asarray(magzp, dtype=float)
+        magzp_err = np.asarray(magzp_err, dtype=float)
+    if magzp is None and magzp_err is None:
+        sigma_f = 3.39059e-20 * np.exp(-0.921034 * abmag) * abmag_err
+    else:
+        del_f = 0.921034 * np.exp(0.921034 * (magzp - abmag))
+        sigma_f = np.sqrt(del_f ** 2 * (abmag_err + magzp_err) ** 2)
+    return sigma_f
 
-
-def abmag_err_to_flux_err(abmag, abmag_err):
-    return 3.39059e-20 * np.exp(-0.921034 * abmag) * abmag_err
-
-
+    
 def lambda_to_nu(wavelength):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -65,7 +76,10 @@ def magnitude_in_band(band: str, spectrum):
     for bandname in additional_bands.keys():
         fname = additional_bands[bandname]
         b = np.loadtxt(fname)
-        bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1] / 50, name=bandname)
+        if "Swift" in fname:
+            bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1] / 50, name=bandname)
+        else:
+            bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1], name=bandname)
         sncosmo.registry.register(bandpass, force=True)
 
     bp = sncosmo_spectral_v13.read_bandpass(bandpassfiles[band])
@@ -170,8 +184,6 @@ def powerlaw_error_prop(
 ):
     """ """
     nu = frequency ** alpha * scale
-    print(nu)
-    print(nu * np.log(frequency))
     first_term = (nu * np.log(frequency)) ** 2 * alpha_err ** 2
     second_term = (frequency ** alpha) ** 2 * scale_err ** 2
     flux_err = np.sqrt(first_term + second_term)

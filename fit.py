@@ -107,25 +107,30 @@ class FitSpectrum:
 
             for i in range(2, len(data) + 1, 1):
                 fit_params[f"alpha_{i}"].expr = "alpha_1"
+                
+            fcn_kws = {"fittype": self.fittype}
 
         else:
             for iy, y in enumerate(data):
                 fit_params.add(
-                    f"temperature_{iy+1}", value=80000, min=10000, max=150000
+                    f"temperature_{iy+1}", value=30000, min=1000, max=150000
                 )
-                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e22, max=1e25)
-                fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=1, max=3.5)
-                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=2, max=4)
+                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e20, max=1e25)
+                fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=0, max=3.5)
+                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=0, max=4)
 
             for i in range(2, len(data) + 1, 1):
                 fit_params[f"extinction_av_{i}"].expr = "extinction_av_1"
                 fit_params[f"extinction_rv_{i}"].expr = "extinction_rv_1"
 
+            fcn_kws = {"fittype": self.fittype, "redshift": self.redshift}
+
+
         minimizer = Minimizer(
             self._global_minimizer,
             fit_params,
             fcn_args=(wl_observed, data, data_err),
-            fcn_kws={"fittype": self.fittype, "redshift": self.redshift},
+            fcn_kws=fcn_kws,
         )
 
         out = minimizer.minimize()
@@ -236,7 +241,7 @@ class FitSpectrum:
                     params.add("alpha", value=-0.9, min=-1.2, max=-0.1)
         else:
             params.add("temp", value=30000, min=1000, max=150000)
-            params.add("scale", value=1e23, min=1e22, max=1e25)
+            params.add("scale", value=1e23, min=1e20, max=1e25)
 
         x = wl_observed
         data = mags
@@ -368,7 +373,9 @@ class FitSpectrum:
                 "scale": parameters["scale"],
                 "scale_err": out.params["scale"].stderr,
                 "extinction_av": extinction_av,
+                "extinction_av_err": extinction_av_err,
                 "extinction_rv": extinction_rv,
+                "extinction_rv_err": extinction_rv_err,
                 "mjd": self.magnitudes["mjd"],
                 "red_chisq": reduced_chisquare,
                 "red_chisq_binfit": out.redchi,
@@ -531,6 +538,12 @@ class FitSpectrum:
         if fittype == "blackbody":
             redshift = kwargs["redshift"]
 
+        if fittype == "powerlaw":
+            if "redshift" in kwargs:
+                redshift = kwargs["redshift"]
+            else:
+                redshift = None
+
         ndata, _ = data.shape
         residual = 0.0 * data[:]
 
@@ -544,7 +557,7 @@ class FitSpectrum:
                 scale = params[f"scale_{i+1}"]
 
                 spectrum = utilities.powerlaw_spectrum(
-                    alpha=alpha, scale=scale, redshift=None
+                    alpha=alpha, scale=scale, redshift=redshift
                 )
 
                 fluxes = []

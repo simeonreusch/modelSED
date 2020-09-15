@@ -31,6 +31,12 @@ def plot_sed_from_flux(
     plotmag: bool = False,
 ):
     """ """
+    
+    outpath = os.path.join("plots", "global", fittype)
+
+    if not os.path.exists(outpath):
+        os.makedirs(outpath)
+
     wl_observed = []
     for band in bands:
         wl_observed.append(filter_wl[band])
@@ -134,9 +140,19 @@ def plot_sed_from_dict(
     frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
     spectrum_mags = []
 
-    for index, wavelength in enumerate(spectrum.wave):
-        spectrum_mag = utilities.flux_to_abmag(spectrum.flux[index])
-        spectrum_mags.append(spectrum_mag)
+    # # ugly hack
+    # import json
+    # update = {"P200_J": {"observed": 17.51, "observed_err": 0.2, "wavelength": 12063.68, "frequency": utilities.lambda_to_nu(12063.68)}, "P200_H": {"observed": 16.45, "observed_err": 0.2, "wavelength": 15696.2, "frequency": utilities.lambda_to_nu(15696.2)},  "P200_Ks": {"observed": 15.33, "observed_err": 0.2, "wavelength": 21301.1, "frequency": utilities.lambda_to_nu(21301.1)}}
+    # mags.update(update)
+    # with open(os.path.join("fit", "blackbody.json")) as json_file:
+    #     outfile = json.load(json_file)
+    # bb_data = outfile["11"]
+    # bb_spectrum = utilities.blackbody_spectrum(temperature=bb_data["temperature"], scale=bb_data["scale"], redshift=0.2666, extinction_av=bb_data["extinction_av"], extinction_rv=bb_data["extinction_rv"])
+    # spectrum_mags_bb = []
+    # for index, wavelength in enumerate(bb_spectrum.wave):
+    #     spectrum_mag = utilities.flux_to_abmag(bb_spectrum.flux[index])
+    #     spectrum_mags_bb.append(spectrum_mag)
+    # # end of ugly hack
 
     plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=300)
     ax1 = plt.subplot(111)
@@ -146,27 +162,26 @@ def plot_sed_from_dict(
         ax1.set_ylabel(r"$F_\nu~[$erg$~/~ s \cdot $cm$^2 \cdot$ Hz]")
         ax1.set_xlabel(r"$\nu$ [Hz]")
         plt.yscale("log")
+        # ax1.set_ylim([1e-28, 4e-26])
         ax1.set_ylim([2e-28, 4e-27])
+        # ax1.set_xlim([1e14, 2e15])
         ax1.set_xlim([3.5e14, 2e15])
         if "alpha" in annotations.keys():
             alpha = annotations["alpha"]
         if "alpha_err" in annotations.keys():
             alpha_err = annotations["alpha_err"]
-        scale = annotations["scale"]
-        scale_err = annotations["scale_err"]
-        flux_err = utilities.powerlaw_error_prop(
-            frequencies.value, alpha, alpha_err, scale, scale_err
-        )
 
-        ax1.plot(frequencies.value, spectrum._flux)
-        # ax1.plot(frequencies.value, spectrum._flux+flux_err.value)
+        ax1.plot(frequencies.value, spectrum._flux, color="black")
+        # ugly hack
+        # ax1.plot(frequencies.value, bb_spectrum._flux, color="blue")
+        # 
         for key in mags.keys():
             mag = mags[key]["observed"]
             mag_err = mags[key]["observed_err"]
             flux = utilities.abmag_to_flux(mag)
             flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)
             ax1.errorbar(
-                mags[key]["frequency"], flux, flux_err, color=cmap[key], fmt="."
+                mags[key]["frequency"], flux, flux_err, color=cmap[key], fmt=".", label=filterlabel[key]
             )
         ax2 = ax1.secondary_xaxis(
             "top", functions=(utilities.lambda_to_nu, utilities.nu_to_lambda)
@@ -187,26 +202,27 @@ def plot_sed_from_dict(
         ax2.set_xlabel(r"$\nu$ [Hz]")
 
     bbox = dict(boxstyle="round", fc="none", ec="black")
+    bbox2 = dict(boxstyle="round", fc="none", ec="blue")
 
     if annotations:
         annotationstr = ""
         if "alpha" in annotations.keys():
             alpha = annotations["alpha"]
-            annotationstr += f"$\\alpha$={alpha:.3f}\n"
+            annotationstr += f"Spectral index $\\alpha$={alpha:.3f}\n"
         if "temperature" in annotations.keys():
             temperature = annotations["temperature"]
             annotationstr += f"temperature={temperature:.2E}\n"
         if "scale" in annotations.keys():
             scale = annotations["scale"]
-            annotationstr += f"scale={scale:.2E}\n"
+            annotationstr += f"normalization $\\beta$={scale:.2E}\n"
         if "mjd" in annotations.keys():
             mjd = annotations["mjd"]
             annotationstr += f"MJD={mjd:.2f}\n"
-        if "reduced_chisquare" in annotations.keys():
-            temp = "red. $\\chi^2$="
-            reduced_chisquare = annotations["reduced_chisquare"]
-            annotationstr += temp
-            annotationstr += f"{reduced_chisquare:.2f}\n"
+        # if "reduced_chisquare" in annotations.keys():
+        #     temp = "red. $\\chi^2$="
+        #     reduced_chisquare = annotations["reduced_chisquare"]
+        #     annotationstr += temp
+        #     annotationstr += f"{reduced_chisquare:.2f}\n"
         if "bolometric_luminosity" in annotations.keys():
             bolometric_luminosity = annotations["bolometric_luminosity"]
             annotationstr += f"bol. lum.={bolometric_luminosity:.2E}\n"
@@ -215,17 +231,46 @@ def plot_sed_from_dict(
             annotationstr = annotationstr[:-2]
 
         if not plotmag:
-            annotation_location = (1.2e15, 2.2e-27)
+            # annotation_location = (1.2e15, 2.2e-27)
+            annotation_location = (0.7e15, 1.5e-26)
         else:
             annotation_location = (2e4, 18.0)
 
-        plt.annotate(
-            annotationstr,
-            annotation_location,
+        # plt.annotate(
+        #     annotationstr,
+        #     annotation_location,
+        #     fontsize=FONTSIZE,
+        #     color="black",
+        #     bbox=bbox,
+        # )
+        ax1.legend(
             fontsize=FONTSIZE,
-            color="black",
-            bbox=bbox,
+            fancybox=True,
+            edgecolor="black",
+            # loc=(0.77,0.45),
+            loc=0,
         )
+
+        # # more ugly hack
+        # annotationstr_powerlaw = "powerlaw fit"
+        # annotationstr_blackbody = "blackbody fit"
+        # annotationstr_powerlaw_loc = (1.5e14, 1.0e-27)
+        # annotationstr_blackbody_loc = (1.5e14, 3e-28)
+        # plt.annotate(
+        #     annotationstr_powerlaw,
+        #     annotationstr_powerlaw_loc,
+        #     fontsize=FONTSIZE,
+        #     color="black",
+        #     bbox=bbox,
+        # )
+        # plt.annotate(
+        #     annotationstr_blackbody,
+        #     annotationstr_blackbody_loc,
+        #     fontsize=FONTSIZE,
+        #     color="blue",
+        #     bbox=bbox2,
+        # )
+        # # end of ugly hack
 
     plt.savefig(os.path.join(outpath, f"{mjd}.png"))
     plt.close()
@@ -237,6 +282,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     lumi_without_nir = []
     lumi_with_nir = []
     bolo_lumi = []
+    radius = []
 
     for entry in fitparams:
         mjds.append(fitparams[entry]["mjd"])
@@ -246,19 +292,33 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     if fittype == "blackbody":
         for entry in fitparams:
             bolo_lumi.append(fitparams[entry]["bolometric_luminosity"])
+            radius.append(fitparams[entry]["radius"])
 
     plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
     ax1 = plt.subplot(111)
-    ax1.set_ylabel("Intrinsic Luminosity [erg/s]")
     ax1.set_xlabel("MJD")
 
     if fittype == "blackbody":
-        ax1.plot(mjds, bolo_lumi, label="Bolometric Luminosity")
+        ax1.set_ylabel("Blackbody luminosity [erg/s]")
+        plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
+        ax2 = ax1.twinx()
+        plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
+        ax2.set_ylabel("Blackbody radius [m]")
+        plots = plot1+plot2
+        labels = [p.get_label() for p in plots]
+        # ax1.legend(plots, labels, loc=0)
+        ax2.yaxis.label.set_color('red')
+        ax1.yaxis.label.set_color('blue')
+        # ax2.tick_params(axis='y', colors='red')
+        # ax1.tick_params(axis='y', colors='blue')
+        # ax2.spines['right'].set_color('red')
+        # ax1.spines['left'].set_color('blue')
     else:
+        ax1.set_ylabel("Intrinsic luminosity [erg/s]")
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
-
-    ax1.legend()
+        ax1.legend()
+    
     plt.savefig(f"plots/luminosity_{fittype}.png")
     plt.close()
 
@@ -392,29 +452,59 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
 
     if fittype == "powerlaw":
         alphas = set()
+        alpha_errs = set()
         for entry in fitparams:
             alpha = fitparams[entry]["alpha"]
+            alpha_err = fitparams[entry]["alpha_err"]
             alphas.add(alpha)
+            alpha_errs.add(alpha_err)
         if len(alphas) == 1:
-            plt.title(rf"$\alpha$ = {list(alphas)[0]:.2f}")
+            plt.title(f"Spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}")
 
     if fittype == "blackbody":
         extinction_avs = set()
         extinction_rvs = set()
+        extinction_av_errs = set()
+        extinction_rv_errs = set()
         for entry in fitparams:
             av = fitparams[entry]["extinction_av"]
             rv = fitparams[entry]["extinction_rv"]
+            av_err = fitparams[entry]["extinction_av_err"]
+            rv_err = fitparams[entry]["extinction_rv_err"]
             extinction_avs.add(av)
             extinction_rvs.add(rv)
-        title = ""
+            extinction_av_errs.add(av_err)
+            extinction_rv_errs.add(rv_err)
+        title = "Blackbody spectrum fit, "
         if len(extinction_avs) == 1:
-            title += f"extinction AV = {list(extinction_avs)[0]:.2f}"
+            title += f"extinction $A_V$ = {list(extinction_avs)[0]:.2f} $\pm$ {list(extinction_av_errs)[0]:.2f}"
         if len(extinction_rvs) == 1:
-            title += f"  extinction RV = {list(extinction_rvs)[0]:.2f}"
+            title += f", $R_V$ = {list(extinction_rvs)[0]:.2f} $\pm$ {list(extinction_rv_errs)[0]:.2f}"
 
         if len(title) > 0:
             plt.title(title)
 
     plt.legend(fontsize=ANNOTATION_FONTSIZE)
     plt.savefig(f"plots/lightcurve_{fittype}.png")
+    plt.close()
+
+def plot_temperature(fitparams, **kwargs):
+    """ """
+    plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
+    ax1 = plt.subplot(111)
+    ax1.set_ylabel("Temperature [K]")
+    ax1.set_xlabel("MJD")
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("Radius")
+    
+    mjds = []
+    temps = []
+    radii = []
+    for entry in fitparams:
+        mjds.append(fitparams[entry]["mjd"])
+        temps.append(fitparams[entry]["temperature"])
+        radii.append(fitparams[entry]["radius"])
+    ax1.plot(mjds, temps, color="blue")
+    ax2.plot(mjds, radii, color="red")
+    plt.savefig(f"plots/temperature_radius.png")
     plt.close()

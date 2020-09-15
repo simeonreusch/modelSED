@@ -75,7 +75,7 @@ class SED:
     def get_mean_magnitudes(self, bands: list = None):
         """ """
         if self.path_to_lightcurve is None:
-            lc_file = os.path.join(self.lc_dir, "full_lc.csv")
+            lc_file = os.path.join(self.lc_dir, "full_lc_fp.csv")
 
         lc = pd.read_csv(lc_file)
 
@@ -145,11 +145,10 @@ class SED:
 
         progress_bar = ProgressBar(len(mean_mags))
 
-        # alpha_bound = -0.1
         i = 0
         for index, entry in enumerate(mean_mags):
             if len(mean_mags[entry]) > min_bands_per_bin:
-                if neccessary_bands:
+                if neccessary_bands:# and mean_mags[entry]["mjd"] > 58670:
                     if all(band in mean_mags[entry] for band in neccessary_bands):
                         result = self.fit_one_bin(mean_mags[entry], **kwargs)
                         fitparams.update({i: result})
@@ -176,7 +175,10 @@ class SED:
         else:
             mean_mags = self.get_mean_magnitudes()
 
-        fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift)
+        if "plot" in kwargs:
+            fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift, plot=kwargs["plot"])
+        else:
+            fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift)
 
         if "bands" in kwargs:
             bands = kwargs["bands"]
@@ -184,7 +186,8 @@ class SED:
             bands = None
 
         result = fit.fit_global_parameters(
-            magnitudes=mean_mags, min_datapoints=len(bands),
+            magnitudes=mean_mags,
+            min_datapoints=len(bands),
         )
 
         with open(
@@ -196,13 +199,16 @@ class SED:
     def plot_lightcurve(self, **kwargs):
         """" """
         fitparams = self.fitparams
-        lc_file = os.path.join(self.lc_dir, "full_lc_without_p200.csv")
+        lc_file = os.path.join(self.lc_dir, "full_lc_fp_without_p200.csv")
         plot.plot_lightcurve(
             lc_file, self.fitparams, self.fittype, self.redshift, **kwargs
         )
 
-    def plot_luminosity(self):
-        plot.plot_luminosity(self.fitparams, self.fittype)
+    def plot_luminosity(self, **kwargs):
+        plot.plot_luminosity(self.fitparams, self.fittype, **kwargs)
+
+    def plot_temperature(self, **kwargs):
+        plot.plot_temperature(self.fitparams, **kwargs)
 
     def load_fitparams(self):
         with open(os.path.join(self.fit_dir, f"{self.fittype}.json")) as json_file:
@@ -225,31 +231,41 @@ if __name__ == "__main__":
         "P48+ZTF_g",
         "P48+ZTF_r",
         "P48+ZTF_i",
+      #  "Swift_UVW2",
+       # "Swift_UVW1",
+        "Swift_UVM2",
+    ]
+    with_p200 = [
+        "P48+ZTF_g",
+        "P48+ZTF_r",
+        "P48+ZTF_i",
         # "Swift_UVW2",
         # "Swift_UVW1",
         "Swift_UVM2",
+        # "P200_J",
+        # "P200_H",
+        # "P200_Ks",
     ]
 
     nbins = 60
 
-    fittype = "powerlaw"
-    fitglobal = True
+    fittype = "blackbody"
+    fitglobal = False
     fitlocal = True
 
     sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
     if fitglobal:
-        sed.fit_global(bands=bands_for_global_fit)
+        sed.fit_global(bands=bands_for_global_fit, plot=True)
     sed.load_global_fitparams()
     if fitlocal:
         if fittype == "powerlaw":
-            # sed.fit_bins(alpha=sed.fitparams_global["alpha"], bands=bands_for_global_fit)
             sed.fit_bins(
                 alpha=sed.fitparams_global["alpha"],
                 alpha_err=sed.fitparams_global["alpha_err"],
                 bands=bands_for_global_fit,
                 min_bands_per_bin=2,
                 # neccessary_bands=["Swift_UVM2"],
-                verbose=True,
+                verbose=False,
             )
         else:
             sed.fit_bins(
@@ -258,10 +274,13 @@ if __name__ == "__main__":
                 extinction_rv=sed.fitparams_global["extinction_rv"],
                 extinction_rv_err=sed.fitparams_global["extinction_rv_err"],
                 bands=bands_for_global_fit,
-                min_bands_per_bin=3,
+                min_bands_per_bin=2,
                 neccessary_bands=["Swift_UVM2"],
-                verbose=True,
+                verbose=False,
             )
     sed.load_fitparams()
     sed.plot_lightcurve(bands=bands_for_global_fit)
+    # sed.plot_lightcurve(bands=with_p200)
+    # if fittype == "blackbody":
+    #     sed.plot_temperature()
     sed.plot_luminosity()
