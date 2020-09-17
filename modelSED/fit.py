@@ -600,290 +600,44 @@ class FitSpectrum:
         return flattened_residual
 
 
-# GRAVEYARD
+def powerlaw_minimizer(params, x, data=None, **kwargs):
+    """ """
+    filter_wl = utilities.load_info_json("filter_wl")
+    wl_filter = {v: k for k, v in filter_wl.items()}
 
-# magnitudes = {}
-# index = 0
-# for mjd in fit_dict.keys():
-#     for band in fit_dict[mjd]:
-#         fit_dict[mjd][band].append(mjd)
-#     magnitudes.update({index: fit_dict[mjd]})
-#     index += 1
+    if "alpha" in kwargs:
+        alpha = kwargs["alpha"]
+    else:
+        alpha = params["alpha"]
 
-# for i in range(1, len(data)+1, 1):
-#     alpha = parameters[f"alpha_{i}"]
-#     scale = parameters[f"scale_{i}"]
+    if "scale" in params.keys():
+        scale = params["scale"]
+    else:
+        scale = None
 
-#     powerlaw_nu = self.frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
-#     spectrum = sncosmo_spectral_v13.Spectrum(
-#         wave=self.wavelengths, flux=powerlaw_nu, unit=utilities.FNU
-#     )
+    if "redshift" in params.keys():
+        redshift = params["redshift"]
+    else:
+        redshift = None
 
-#     spectrum_evaluated = self._evaluate_spectrum(spectrum, magnitudes[i-1])
+    spectrum = utilities.powerlaw_spectrum(alpha=alpha, scale=scale, redshift=redshift)
 
-#     magnitudes_outdict = spectrum_evaluated[0]
-#     reduced_chisquare = spectrum_evaluated[1]
-#     residuals = spectrum_evaluated[2]
+    ab_model_list = []
+    flux_list = []
 
-#     print(magnitudes_outdict)
+    for i in x:
+        ab_model = utilities.magnitude_in_band(wl_filter[i], spectrum)
+        flux = utilities.abmag_to_flux(ab_model)
+        ab_model_list.append(ab_model)
+        flux_list.append(flux)
 
-#     if self.plot:
-#         annotations = {
-#             "alpha": alpha,
-#             "scale": scale,
-#         }
+    if "flux" in kwargs.keys():
+        if data:
+            return np.asarray(flux_list) - np.asarray(data)
+        else:
+            return flux_list
 
-#         plot.plot_sed_from_dict(magnitudes_outdict, spectrum, annotations)
-
-
-# for band in data:
-#     wavelength = filter_wl[band]
-#     freq = const.c.value / (wavelength * 1e-10)
-#     mean_flux = np.mean(data[band]["flux"])
-#     mean_flux_err = np.sqrt(np.sum(np.asarray(data[band]["flux_err"]) ** 2)) / len(data[band]["flux_err"])
-#     mean_fluxes.append(mean_flux)
-#     mean_flux_errs.append(mean_flux_err)
-#     wavelengths.append(wavelength)
-#     freqs.append(freq)
-
-
-# if self.plot:
-
-#     plt.figure(figsize=(8, 0.75 * 8), dpi=300)
-#     ax1 = plt.subplot(111)
-#     plt.xscale("log")
-#     ax1.errorbar(freqs, mean_fluxes, mean_flux_errs, fmt=".")
-#     plt.savefig("test.png")
-
-# if fittype == "powerlaw":
-#     params = Parameters()
-#     params.add("alpha", value=-1, min=-10, max=0)
-#     params.add("scale", value=1e15, min=1e10, max=1e23)
-
-#     minimizer = Minimizer(
-#         self._powerlaw_minimizer,
-#         params,
-#         fcn_args=(wavelengths, mean_fluxes),
-#         fcn_kws={"flux": True},
-#     )
-#     result = minimizer.minimize()
-#     parameters = result.params.valuesdict()
-
-#     alpha = parameters["alpha"]
-#     scale = parameters["scale"]
-
-#     print(f"alpha = {alpha}")
-#     print(f"scale = {scale}")
-
-#     fluxes_data = mean_fluxes
-#     mags_data = []
-#     fluxes_model = []
-#     mags_model = []
-#     fluxes_spectrum = []
-#     mags_spectrum = []
-
-#     spectrum = utilities.powerlaw_spectrum(alpha=alpha, scale=scale, redshift=None)
-
-#     for index, wl in enumerate(spectrum.wave):
-#         flux_spectrum = spectrum.flux[index]
-#         mag_spectrum = utilities.flux_to_abmag(flux_spectrum)
-#         fluxes_spectrum.append(flux_spectrum)
-#         mags_spectrum.append(mag_spectrum)
-
-#     for flux in mean_fluxes:
-#         mags_data.append(utilities.flux_to_abmag(flux))
-
-#     for band in data:
-#         mag_model = utilities.magnitude_in_band(band, spectrum)
-#         mags_model.append(mag_model)
-#         fluxes_model.append(utilities.abmag_to_flux(mag_model))
-
-
-#     wls, frequencies = utilities.get_wavelengths_and_frequencies()
-#     powerlaw_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
-#     spectrum = sncosmo_spectral_v13.Spectrum(
-#         wave=wls, flux=powerlaw_nu, unit=utilities.FNU
-#     )
-
-
-#     mags_data = utilities.flux_to_abmag(fluxes_data)
-#     mags_model = utilities.flux_to_abmag(fluxes_model)
-
-#     frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
-#     spectrum_mags = []
-#     for index, wl in enumerate(spectrum.wave):
-#         spectrum_mag = utilities.flux_to_abmag(spectrum.flux[index])
-#         spectrum_mags.append(spectrum_mag)
-
-#     print(len(fluxes_model))
-#     print(len(wavelengths))
-
-#     if self.plot:
-#         frequencies = utilities.lambda_to_nu(spectrum.wave)
-
-#         plt.figure(figsize=(8, 0.75 * 8), dpi=300)
-#         ax1 = plt.subplot(111)
-#         plt.xscale("log")
-#         ax1.scatter(wavelengths, mean_fluxes, marker=".")
-#         ax1.scatter(wavelengths, fluxes_model, marker=".", color="red")
-#         ax1.plot(spectrum.wave, spectrum.flux, color="black")
-#         plt.xscale("log")
-#         plt.yscale("log")
-#         plt.savefig("test2.png")
-
-
-# ### Now we normalize everything to one band
-# nr_bins = len(reduced_dict)
-
-# # See if there is a band present in each datapoint
-# count_occurences = {}
-# for band in bands:
-#     i = 0
-#     for index, value in enumerate(reduced_dict.values()):
-#         if band in value:
-#             i += 1
-#     count_occurences.update({band: i})
-
-# to_delete = []
-# for entry in count_occurences:
-#     if count_occurences[entry] < nr_bins:
-#         to_delete.append(entry)
-
-# for entry in to_delete:
-#     del count_occurences[entry]
-
-# if len(count_occurences) == 0:
-#     raise ValueError("There is no single band present in all bins. Normalization not possible")
-
-# # Now choose the normalization baseline: band with smallest mean error
-# magnitude_error = {}
-# for band in count_occurences.keys():
-#     mag_errs = []
-#     for index, mjd in enumerate(reduced_dict):
-#         mag, mag_err = reduced_dict[mjd][band]
-#         mag_errs.append(mag_err)
-#     mean_mag_err = np.sqrt(np.sum(np.asarray(mag_errs) ** 2)) / len(mag_errs)
-#     magnitude_error.update({band: mean_mag_err})
-
-# normalization_band = min(magnitude_error, key=magnitude_error.get)
-
-# print(f"{normalization_band} has the smallest error, will normalize with respect to this band.")
-
-# normalized_magnitudes = {}
-
-# fit_dict = {}
-# for index, mjd in enumerate(reduced_dict):
-#     temp_dict = {}
-#     for entry in reduced_dict[mjd]:
-#         mag = reduced_dict[mjd][entry][0]
-#         mag_reference = reduced_dict[mjd][normalization_band][0]
-#         mag_err = reduced_dict[mjd][entry][1]
-#         normalized_mag = mag/mag_reference
-#         normalized_mag_err = mag_err/mag_reference
-#         normalized_flux = utilities.abmag_to_flux(mag)/utilities.abmag_to_flux(mag_reference)
-#         normalized_flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)/utilities.abmag_to_flux(mag_reference)
-#         temp_dict.update({entry: [normalized_flux, normalized_flux_err]})
-#     fit_dict.update({mjd: temp_dict})
-
-# reformatted_dict = collections.defaultdict(list)
-# test = collections.defaultdict(dict)
-
-# for mjd, entry in fit_dict.items():
-#     for band, fluxes in entry.items():
-#         fluxes.append(mjd)
-#         reformatted_dict[band].append(fluxes)
-
-# data = {}
-
-# for band, value in reformatted_dict.items():
-#     fluxes = []
-#     flux_errs = []
-#     mjds = []
-#     for item in value:
-#         fluxes.append(item[0])
-#         flux_errs.append(item[1])
-#         mjds.append(item[2])
-#     data.update({band: {"mjd": mjds, "flux": fluxes, "flux_err": flux_errs}})
-
-
-# def fit_bin_powerlaw(self, **kwargs):
-#     """ """
-#     # magnitudes_outdict = {}
-#     flux_observed = []
-#     flux_err_observed = []
-#     freq = []
-#     wl_observed = []
-
-#     for key in self.magnitudes.keys():
-#         if key != "mjd":
-#             mag = self.magnitudes[key][0]
-#             mag_err = self.magnitudes[key][1]
-#             flux_observed.append(utilities.abmag_to_flux(mag))
-#             flux_err_observed.append(utilities.abmag_err_to_flux_err(mag, mag_err))
-#             freq.append(const.c.value / (self.filter_wl[key] * 1e-10))
-#             wl_observed.append(self.filter_wl[key])
-
-#     if "alpha" in kwargs.keys():
-#         alpha = kwargs["alpha"]
-
-#         def func_powerlaw(x, b):
-#             return x ** (alpha) * b
-
-#     else:
-
-#         def func_powerlaw(x, a, b):
-#             return x ** (-a) * b
-
-#     with warnings.catch_warnings():
-#         warnings.simplefilter("ignore", category=OptimizeWarning)
-#         popt, pcov = curve_fit(
-#             func_powerlaw, freq, flux_observed, maxfev=2000, sigma=flux_err_observed
-#         )
-
-#     if "alpha" in kwargs.keys():
-#         scale = popt[0]
-#     else:
-#         alpha = -popt[0]
-#         scale = popt[1]
-
-#     powerlaw_nu = self.frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
-#     spectrum = sncosmo_spectral_v13.Spectrum(
-#         wave=self.wavelengths, flux=powerlaw_nu, unit=utilities.FNU
-#     )
-
-#     spectrum_evaluated = self._evaluate_spectrum(spectrum, self.magnitudes)
-
-#     magnitudes_outdict = spectrum_evaluated[0]
-#     reduced_chisquare = spectrum_evaluated[1]
-#     residuals = spectrum_evaluated[2]
-
-#     if self.plot:
-#         annotations = {
-#             "mjd": self.magnitudes["mjd"],
-#             "alpha": alpha,
-#             "scale": scale,
-#             "reduced_chisquare": reduced_chisquare,
-#         }
-#         plot.plot_sed_from_dict(magnitudes_outdict, spectrum, annotations)
-
-#     luminosity_uv_optical = utilities.calculate_luminosity(
-#         spectrum,
-#         wl_min=self.filter_wl["Swift_UVW2"],
-#         wl_max=self.filter_wl["P48+ZTF_i"],
-#         redshift=self.redshift,
-#     )
-#     luminosity_uv_nir = utilities.calculate_luminosity(
-#         spectrum,
-#         wl_min=self.filter_wl["Swift_UVW2"],
-#         wl_max=self.filter_wl["P200_Ks"],
-#         redshift=self.redshift,
-#     )
-
-#     return {
-#         "alpha": alpha,
-#         "scale": scale,
-#         "mjd": self.magnitudes["mjd"],
-#         "red_chisq": reduced_chisquare,
-#         "luminosity_uv_optical": luminosity_uv_optical.value,
-#         "luminosity_uv_nir": luminosity_uv_nir.value,
-#     }
+    if data:
+        return np.asarray(ab_model_list) - np.asarray(data)
+    else:
+        return ab_model_list
