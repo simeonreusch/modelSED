@@ -2,13 +2,13 @@
     "P48+ZTF_g": "instrument_data/bandpasses/csv/g.csv",
     "P48+ZTF_r": "instrument_data/bandpasses/csv/r.csv",
     "P48+ZTF_i": "instrument_data/bandpasses/csv/i.csv",
-    "Swift_B": "instrument_data/bandpasses/csv/swift_B.csv",
-    "Swift_U": "instrument_data/bandpasses/csv/swift_U.csv",
-    "Swift_UVM2": "instrument_data/bandpasses/csv/swift_M2.csv",
-    "Swift_UVW1": "instrument_data/bandpasses/csv/swift_W1.csv",
-    "Swift_UVW2": "instrument_data/bandpasses/csv/swift_W2.csv",
-    "Swift_V": "instrument_data/bandpasses/csv/swift_V.csv",
-    "P200_J": "instrument_data/bandpasses/csv/P200_J.csv",
-    "P200_H": "instrument_data/bandpasses/csv/P200_H.csv",
-    "P200_Ks": "instrument_data/bandpasses/csv/P200_Ks.csv"
+    "Swift+B": "instrument_data/bandpasses/csv/swift_B.csv",
+    "Swift+U": "instrument_data/bandpasses/csv/swift_U.csv",
+    "Swift+UVM2": "instrument_data/bandpasses/csv/swift_M2.csv",
+    "Swift+UVW1": "instrument_data/bandpasses/csv/swift_W1.csv",
+    "Swift+UVW2": "instrument_data/bandpasses/csv/swift_W2.csv",
+    "Swift+V": "instrument_data/bandpasses/csv/swift_V.csv",
+    "P200+J": "instrument_data/bandpasses/csv/P200_J.csv",
+    "P200+H": "instrument_data/bandpasses/csv/P200_H.csv",
+    "P200+Ks": "instrument_data/bandpasses/csv/P200_Ks.csv"
     }

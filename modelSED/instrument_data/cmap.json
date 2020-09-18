@@ -2,13 +2,13 @@
     "P48+ZTF_g": "g",
     "P48+ZTF_r": "r",
     "P48+ZTF_i": "orange",
-    "Swift_V": "limegreen",
-    "Swift_B": "blue",
-    "Swift_U": "purple",
-    "Swift_UVW1": "orchid",
-    "Swift_UVM2": "darkblue",
-    "Swift_UVW2": "black",
-    "P200_J": "black",
-    "P200_H": "gray",
-    "P200_Ks": "blue"
+    "Swift+V": "limegreen",
+    "Swift+B": "blue",
+    "Swift+U": "purple",
+    "Swift+UVW1": "orchid",
+    "Swift+UVM2": "darkblue",
+    "Swift+UVW2": "black",
+    "P200+J": "black",
+    "P200+H": "gray",
+    "P200+Ks": "blue"
 }

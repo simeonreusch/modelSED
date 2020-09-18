@@ -142,7 +142,7 @@ def plot_sed_from_dict(
 
     # # ugly hack
     # import json
-    # update = {"P200_J": {"observed": 17.51, "observed_err": 0.2, "wavelength": 12063.68, "frequency": utilities.lambda_to_nu(12063.68)}, "P200_H": {"observed": 16.45, "observed_err": 0.2, "wavelength": 15696.2, "frequency": utilities.lambda_to_nu(15696.2)},  "P200_Ks": {"observed": 15.33, "observed_err": 0.2, "wavelength": 21301.1, "frequency": utilities.lambda_to_nu(21301.1)}}
+    # update = {"P200+J": {"observed": 17.51, "observed_err": 0.2, "wavelength": 12063.68, "frequency": utilities.lambda_to_nu(12063.68)}, "P200+H": {"observed": 16.45, "observed_err": 0.2, "wavelength": 15696.2, "frequency": utilities.lambda_to_nu(15696.2)},  "P200+Ks": {"observed": 15.33, "observed_err": 0.2, "wavelength": 21301.1, "frequency": utilities.lambda_to_nu(21301.1)}}
     # mags.update(update)
     # with open(os.path.join("fit", "blackbody.json")) as json_file:
     #     outfile = json.load(json_file)

@@ -233,20 +233,20 @@ if __name__ == "__main__":
         "P48+ZTF_g",
         "P48+ZTF_r",
         "P48+ZTF_i",
-        #  "Swift_UVW2",
-        # "Swift_UVW1",
-        "Swift_UVM2",
+        #  "Swift+UVW2",
+        # "Swift+UVW1",
+        "Swift+UVM2",
     ]
     with_p200 = [
         "P48+ZTF_g",
         "P48+ZTF_r",
         "P48+ZTF_i",
-        # "Swift_UVW2",
-        # "Swift_UVW1",
-        "Swift_UVM2",
-        # "P200_J",
-        # "P200_H",
-        # "P200_Ks",
+        # "Swift+UVW2",
+        # "Swift+UVW1",
+        "Swift+UVM2",
+        # "P200+J",
+        # "P200+H",
+        # "P200+Ks",
     ]
 
     nbins = 60
@@ -266,7 +266,7 @@ if __name__ == "__main__":
                 alpha_err=sed.fitparams_global["alpha_err"],
                 bands=bands_for_global_fit,
                 min_bands_per_bin=2,
-                # neccessary_bands=["Swift_UVM2"],
+                # neccessary_bands=["Swift+UVM2"],
                 verbose=False,
             )
         else:
@@ -277,7 +277,7 @@ if __name__ == "__main__":
                 extinction_rv_err=sed.fitparams_global["extinction_rv_err"],
                 bands=bands_for_global_fit,
                 min_bands_per_bin=2,
-                neccessary_bands=["Swift_UVM2"],
+                neccessary_bands=["Swift+UVM2"],
                 verbose=False,
             )
     sed.load_fitparams()

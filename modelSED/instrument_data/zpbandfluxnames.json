@@ -2,13 +2,13 @@
     "P48+ZTF_g": "ztfg",
     "P48+ZTF_r": "ztfr",
     "P48+ZTF_i": "ztfi",
-    "Swift_B": "swift_B",
-    "Swift_U": "swift_U",
-    "Swift_UVM2": "swift_M2",
-    "Swift_UVW1": "swift_W1",
-    "Swift_UVW2": "swift_W2",
-    "Swift_V": "swift_V",
-    "P200_J": "P200_J",
-    "P200_H": "P200_H",
-    "P200_Ks": "P200_Ks"
+    "Swift+B": "swift_B",
+    "Swift+U": "swift_U",
+    "Swift+UVM2": "swift_M2",
+    "Swift+UVW1": "swift_W1",
+    "Swift+UVW2": "swift_W2",
+    "Swift+V": "swift_V",
+    "P200+J": "P200_J",
+    "P200+H": "P200_H",
+    "P200+Ks": "P200_Ks"
 }
