@@ -188,6 +188,61 @@ def powerlaw_spectrum(
     return outspectrum
 
 
+def broken_powerlaw_spectrum(
+    alpha1: float,
+    scale1: float,
+    alpha2: float,
+    scale2: float,
+    redshift: float = None,
+    extinction_av: float = None,
+    extinction_rv: float = None,
+):
+    """ """
+    wavelengths, frequencies = get_wavelengths_and_frequencies()
+    if scale1 is None:
+        flux_nu1 = frequencies ** alpha1 * u.erg / u.cm ** 2 / u.s
+    else:
+        flux_nu1 = frequencies ** alpha1 * u.erg / u.cm ** 2 / u.s * scale1
+
+    if scale2 is None:
+        flux_nu2 = frequencies ** alpha2 * u.erg / u.cm ** 2 / u.s
+    else:
+        flux_nu2 = frequencies ** alpha2 * u.erg / u.cm ** 2 / u.s * scale2
+
+    flux_lambda1 = flux_nu_to_lambda(flux_nu1, wavelengths)
+    flux_lambda2 = flux_nu_to_lambda(flux_nu2, wavelengths)
+
+    flux_nu = flux_nu1 + flux_nu2
+    flux_lambda = flux_lambda1 + flux_lambda2
+
+    spectrum_unreddened = sncosmo_spectral_v13.Spectrum(
+        wave=wavelengths, flux=flux_nu, unit=FNU
+    )
+
+    if extinction_av is not None:
+        flux_lambda_reddened = apply(
+            ccm89(np.asarray(wavelengths), extinction_av, extinction_rv),
+            np.asarray(flux_lambda),
+        )
+
+        flux_nu_reddened = flux_lambda_to_nu(flux_lambda_reddened, wavelengths)
+        spectrum_reddened = sncosmo_spectral_v13.Spectrum(
+            wave=wavelengths, flux=flux_nu_reddened, unit=FNU
+        )
+
+    if redshift is not None:
+        spectrum_unreddened.z = 0
+        spectrum_unreddened_redshifted = spectrum_unreddened.redshifted_to(
+            redshift, cosmo=cosmo
+        )
+        outspectrum = spectrum_unreddened_redshifted
+
+    else:
+        outspectrum = spectrum_unreddened
+
+    return outspectrum
+
+
 def powerlaw_error_prop(
     frequency, alpha, alpha_err, scale, scale_err, nu_or_lambda: str = "nu"
 ):
