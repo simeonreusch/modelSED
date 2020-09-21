@@ -199,15 +199,20 @@ def broken_powerlaw_spectrum(
 ):
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
+
     if scale1 is None:
-        flux_nu1 = frequencies ** alpha1 * u.erg / u.cm ** 2 / u.s
+        flux_nu1 = frequencies.value ** alpha1 * u.erg / u.cm ** 2 / u.s / u.Hz
     else:
-        flux_nu1 = frequencies ** alpha1 * u.erg / u.cm ** 2 / u.s * scale1
+        flux_nu1 = (
+            frequencies.value ** alpha1 * scale1 * (u.erg / u.cm ** 2 / u.s / u.Hz)
+        )
 
     if scale2 is None:
-        flux_nu2 = frequencies ** alpha2 * u.erg / u.cm ** 2 / u.s
+        flux_nu2 = frequencies.value ** alpha2 * u.erg / u.cm ** 2 / u.s / u.Hz
     else:
-        flux_nu2 = frequencies ** alpha2 * u.erg / u.cm ** 2 / u.s * scale2
+        flux_nu2 = (
+            frequencies.value ** alpha2 * scale2 * (u.erg / u.cm ** 2 / u.s / u.Hz)
+        )
 
     flux_lambda1 = flux_nu_to_lambda(flux_nu1, wavelengths)
     flux_lambda2 = flux_nu_to_lambda(flux_nu2, wavelengths)
