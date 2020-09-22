@@ -73,9 +73,9 @@ class SED:
     def get_mean_magnitudes(self, bands: list = None):
         """ """
         if self.path_to_lightcurve is None:
-            lc_file = os.path.join(self.lc_dir, "full_lc_fp.csv")
+            self.path_to_lightcurve = os.path.join(self.lc_dir, "full_lc_fp.csv")
 
-        lc = pd.read_csv(lc_file)
+        lc = pd.read_csv(self.path_to_lightcurve)
 
         mjds = lc.mjd.values
         mjd_min = np.min(mjds)
