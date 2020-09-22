@@ -5,13 +5,12 @@
 import logging, os, argparse, json
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy import constants as const
 from astropy.utils.console import ProgressBar
-from .fit import FitSpectrum
-from . import utilities, plot, sncosmo_spectral_v13
+from fit import FitSpectrum
+import utilities, plot, sncosmo_spectral_v13
 
 FIG_WIDTH = 8
 FONTSIZE = 10
@@ -63,6 +62,11 @@ class SED:
             f"Initialized with {self.nbins} time slices, redshift={self.redshift} and fittype={self.fittype}"
         )
 
+    def load_lightcurves(self):
+        # self.path_to_lightcurve
+
+        return None
+
     def fit_one_bin(self, mags: dict, **kwargs):
         """ """
         fit = FitSpectrum(mags, self.fittype, self.redshift)
@@ -77,7 +81,9 @@ class SED:
 
         lc = pd.read_csv(self.path_to_lightcurve)
 
-        mjds = lc.mjd.values
+        lc.drop(columns=["Unnamed: 0"], inplace=True)
+
+        mjds = lc.obsmjd.values
         mjd_min = np.min(mjds)
         mjd_max = np.max(mjds)
 
@@ -90,29 +96,63 @@ class SED:
         else:
             exclude_bands = np.setdiff1d(list(self.filter_wl), bands)
 
-        # bin in mjd
+        lc["telescope_band"] = lc.telescope + "+" + lc.band
+        lc = lc[~lc.telescope_band.isin(exclude_bands)]
+        lc.reset_index(inplace=True)
+        lc.drop(columns=["index"], inplace=True)
+
+        result_df = pd.DataFrame()
+
         for index, mjd in enumerate(mjd_iter):
             if index != len(mjd_iter) - 1:
-                instrumentfilters = {}
-                df = lc.query(f"mjd >= {mjd_iter[index]} and mjd < {mjd_iter[index+1]}")
-                for instrument in df.instrument.unique():
-                    for band in df.query("instrument == @instrument")[
-                        "filter"
-                    ].unique():
-                        mag = df.query("instrument == @instrument and filter == @band")[
-                            "magpsf"
-                        ].values
-                        mag_err = df.query(
-                            "instrument == @instrument and filter == @band"
-                        )["sigmamagpsf"].values
-                        mean_mag = np.mean(mag)
-                        mean_mag_err = np.sqrt(np.sum(mag_err ** 2)) / len(mag_err)
-                        combin = {f"{instrument}_{band}": [mean_mag, mean_mag_err]}
-                        if not f"{instrument}_{band}" in exclude_bands:
-                            instrumentfilters.update(combin)
-                instrumentfilters.update({"mjd": mjd})
-                slices.update({index: instrumentfilters})
-        return slices
+                df = lc.query(
+                    f"obsmjd >= {mjd_iter[index]} and obsmjd < {mjd_iter[index+1]}"
+                )
+                for telescope_band in df.telescope_band.unique():
+                    _df = df.query("telescope_band == @telescope_band")
+                    mean_mag = np.mean(_df["mag"].values)
+                    mean_mag_err = np.mean(_df["mag_err"].values)
+                    entries = len(_df["mag"].values)
+                    mean_obsmjd = np.mean([mjd_iter[index], mjd_iter[index + 1]])
+                    wavelength = self.filter_wl[telescope_band]
+                    result_df = result_df.append(
+                        {
+                            "telescope_band": telescope_band,
+                            "wavelength": wavelength,
+                            "mean_obsmjd": mean_obsmjd,
+                            "entries": entries,
+                            "mean_mag": mean_mag,
+                            "mean_mag_err": mean_mag_err,
+                        },
+                        ignore_index=True,
+                    )
+
+        # print(result_df)
+
+        # # bin in mjd
+        # for index, mjd in enumerate(mjd_iter):
+        #     if index != len(mjd_iter) - 1:
+        #         instrumentfilters = {}
+        #         df = lc.query(f"mjd >= {mjd_iter[index]} and mjd < {mjd_iter[index+1]}")
+        #         for instrument in df.instrument.unique():
+        #             for band in df.query("instrument == @instrument")[
+        #                 "filter"
+        #             ].unique():
+        #                 mag = df.query("instrument == @instrument and filter == @band")[
+        #                     "magpsf"
+        #                 ].values
+        #                 mag_err = df.query(
+        #                     "instrument == @instrument and filter == @band"
+        #                 )["sigmamagpsf"].values
+        #                 mean_mag = np.mean(mag)
+        #                 mean_mag_err = np.sqrt(np.sum(mag_err ** 2)) / len(mag_err)
+        #                 combin = {f"{instrument}_{band}": [mean_mag, mean_mag_err]}
+        #                 if not f"{instrument}_{band}" in exclude_bands:
+        #                     instrumentfilters.update(combin)
+        #         instrumentfilters.update({"mjd": mjd})
+        #         slices.update({index: instrumentfilters})
+        # print(slices)
+        return result_df
 
     def fit_bins(
         self, min_bands_per_bin: float = None, neccessary_bands: list = None, **kwargs
@@ -167,30 +207,29 @@ class SED:
         print(
             f"Fitting full lightcurve for global parameters (with {self.nbins} bins)."
         )
-
         if "bands" in kwargs:
-            mean_mags = self.get_mean_magnitudes(bands=kwargs["bands"])
+            binned_lc_df = self.get_mean_magnitudes(bands=kwargs["bands"])
         else:
-            mean_mags = self.get_mean_magnitudes()
+            binned_lc_df = self.get_mean_magnitudes()
 
         if "plot" in kwargs:
             fit = FitSpectrum(
-                mean_mags,
+                binned_lc_df,
                 fittype=self.fittype,
                 redshift=self.redshift,
                 plot=kwargs["plot"],
             )
         else:
-            fit = FitSpectrum(mean_mags, fittype=self.fittype, redshift=self.redshift)
+            fit = FitSpectrum(
+                binned_lc_df, fittype=self.fittype, redshift=self.redshift
+            )
 
         if "bands" in kwargs:
             bands = kwargs["bands"]
         else:
             bands = None
 
-        result = fit.fit_global_parameters(
-            magnitudes=mean_mags, min_datapoints=len(bands),
-        )
+        result = fit.fit_global_parameters(min_datapoints=len(bands),)
 
         with open(
             os.path.join(self.fit_dir, f"{self.fittype}_global.json"), "w"
@@ -252,13 +291,22 @@ if __name__ == "__main__":
     nbins = 60
 
     fittype = "blackbody"
-    fitglobal = False
+    fitglobal = True
     fitlocal = True
 
-    sed = SED(redshift=redshift, fittype=fittype, nbins=nbins)
+    path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
+
+    sed = SED(
+        redshift=redshift,
+        fittype=fittype,
+        nbins=nbins,
+        path_to_lightcurve=path_to_lightcurve,
+    )
     if fitglobal:
         sed.fit_global(bands=bands_for_global_fit, plot=True)
     sed.load_global_fitparams()
+
+    quit()
     if fitlocal:
         if fittype == "powerlaw":
             sed.fit_bins(

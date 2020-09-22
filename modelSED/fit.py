@@ -4,12 +4,13 @@
 
 import os, json, warnings, collections
 import numpy as np
+import pandas as pd
 import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy import constants as const
 from scipy.optimize import curve_fit, OptimizeWarning
 from astropy.cosmology import Planck15 as cosmo
-from . import utilities, plot, sncosmo_spectral_v13
+import utilities, plot, sncosmo_spectral_v13
 from lmfit import Model, Parameters, Minimizer, report_fit, minimize
 
 
@@ -18,7 +19,7 @@ class FitSpectrum:
 
     def __init__(
         self,
-        magnitudes: dict,
+        binned_lc_df,
         fittype: str = "powerlaw",
         redshift: float = 0,
         plot: bool = True,
@@ -26,16 +27,14 @@ class FitSpectrum:
     ):
 
         self.fittype = fittype
-        self.magnitudes = magnitudes
+        self.binned_lc_df = binned_lc_df
         self.redshift = redshift
         self.plot = plot
         self.filter_wl = utilities.load_info_json("filter_wl")
         self.wavelengths = np.arange(1000, 60000, 10) * u.AA
         self.frequencies = const.c.value / (self.wavelengths.value * 1e-10) * u.Hz
 
-    def fit_global_parameters(
-        self, magnitudes: dict, min_datapoints: int = 4, **kwargs
-    ):
+    def fit_global_parameters(self, min_datapoints: int = 4, **kwargs):
         """ """
         filter_wl = utilities.load_info_json("filter_wl")
 
@@ -45,46 +44,72 @@ class FitSpectrum:
         reduced_dict = {}
         bands = set()
 
-        for index, value in enumerate(magnitudes.values()):
-            nr_entries = len(value.keys())
-            if nr_entries >= min_datapoints + 1:  # because mjd is not a datapoint
-                mjd = value["mjd"]
-                del value["mjd"]
-                reduced_dict.update({mjd: value})
-                for key in value.keys():
-                    bands.add(key)
-                i += 1
+        df = self.binned_lc_df
+        reduced_df = pd.DataFrame(
+            columns=[
+                "telescope_band",
+                "wavelength",
+                "mean_obsmjd",
+                "entries",
+                "mean_mag",
+                "mean_mag_err",
+            ]
+        )
+
+        for mean_obsmjd in df.mean_obsmjd.unique():
+            _df = df.query(f"mean_obsmjd == {mean_obsmjd}")
+            binsize = len(_df.telescope_band.unique())
+            if binsize >= min_datapoints:
+                reduced_df = reduced_df.append(_df, ignore_index=True)
+
+        reduced_df["mean_flux"] = utilities.abmag_to_flux(reduced_df.mean_mag.values)
+        reduced_df["mean_flux_err"] = utilities.abmag_err_to_flux_err(
+            reduced_df.mean_mag.values, reduced_df.mean_mag_err.values
+        )
+
+        # for index, value in enumerate(magnitudes.values()):
+        #     nr_entries = len(value.keys())
+        #     if nr_entries >= min_datapoints + 1:  # because mjd is not a datapoint
+        #         mjd = value["mjd"]
+        #         del value["mjd"]
+        #         reduced_dict.update({mjd: value})
+        #         for key in value.keys():
+        #             bands.add(key)
+        #         i += 1
 
         cmap = utilities.load_info_json("cmap")
-        wavelengths = []
-        freqs = []
-        mean_fluxes = []
-        mean_flux_errs = []
+        # wavelengths = []
+        # freqs = []
+        # mean_fluxes = []
+        # mean_flux_errs = []
 
-        fit_dict = {}
-        bands_to_fit = set()
+        # fit_dict = {}
+        # bands_to_fit = set()
 
-        for mjd in reduced_dict.keys():
-            nr_entries = len(reduced_dict[mjd])
-            if nr_entries < min_datapoints:
-                continue
-            else:
-                fit_dict.update({mjd: reduced_dict[mjd]})
-                for key in reduced_dict[mjd].keys():
-                    bands_to_fit.add(key)
+        # for mjd in reduced_dict.keys():
+        #     nr_entries = len(reduced_dict[mjd])
+        #     if nr_entries < min_datapoints:
+        #         continue
+        #     else:
+        #         fit_dict.update({mjd: reduced_dict[mjd]})
+        #         for key in reduced_dict[mjd].keys():
+        #             bands_to_fit.add(key)
 
-        bands_to_fit = list(bands_to_fit)
+        # bands_to_fit = list(bands_to_fit)
+
+        bands_to_fit = reduced_df.telescope_band.unique()
 
         data = []
         data_err = []
-        for mjd in fit_dict.keys():
+        for mjd in reduced_df.mean_obsmjd.unique():
             fluxes = []
             flux_errs = []
-            for band in bands_to_fit:
-                mag = fit_dict[mjd][band][0]
-                mag_err = fit_dict[mjd][band][1]
-                flux = utilities.abmag_to_flux(mag)
-                flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)
+            for telescope_band in bands_to_fit:
+                _df = reduced_df.query(
+                    f"telescope_band == '{telescope_band}' and mean_obsmjd == '{mjd}'"
+                )
+                flux = _df.mean_flux.values[0]
+                flux_err = _df.mean_flux_err.values[0]
                 fluxes.append(flux)
                 flux_errs.append(flux_err)
             data.append(fluxes)
@@ -92,6 +117,19 @@ class FitSpectrum:
 
         data = np.array(data)
         data_err = np.array(data_err)
+
+        #     for band in bands_to_fit:
+        #         mag = fit_dict[mjd][band][0]
+        #         mag_err = fit_dict[mjd][band][1]
+        #         flux = utilities.abmag_to_flux(mag)
+        #         flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)
+        #         fluxes.append(flux)
+        #         flux_errs.append(flux_err)
+        #     data.append(fluxes)
+        #     data_err.append(flux_errs)
+
+        # data = np.array(data)
+        # data_err = np.array(data_err)
 
         wl_observed = []
         for band in bands_to_fit:

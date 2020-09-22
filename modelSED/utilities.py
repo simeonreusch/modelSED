@@ -10,7 +10,7 @@ import sncosmo
 from extinction import ccm89, apply, remove
 from astropy.cosmology import Planck15 as cosmo
 from astropy.modeling.models import BlackBody
-from . import sncosmo_spectral_v13
+import sncosmo_spectral_v13
 
 FNU = u.erg / (u.cm ** 2 * u.s * u.Hz)
 FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
