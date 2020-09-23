@@ -40,7 +40,6 @@ class FitSpectrum:
 
         # First, check each time bin if enough datapoints are present for each bin
         # when above threshold 'min_datapoints' add the bin
-        i = 0
         reduced_dict = {}
         bands = set()
 
@@ -62,45 +61,20 @@ class FitSpectrum:
             if binsize >= min_datapoints:
                 reduced_df = reduced_df.append(_df, ignore_index=True)
 
-        reduced_df["mean_flux"] = utilities.abmag_to_flux(reduced_df.mean_mag.values)
-        reduced_df["mean_flux_err"] = utilities.abmag_err_to_flux_err(
+        mean_flux = utilities.abmag_to_flux(reduced_df.mean_mag.values)
+        mean_flux_err = utilities.abmag_err_to_flux_err(
             reduced_df.mean_mag.values, reduced_df.mean_mag_err.values
         )
 
-        # for index, value in enumerate(magnitudes.values()):
-        #     nr_entries = len(value.keys())
-        #     if nr_entries >= min_datapoints + 1:  # because mjd is not a datapoint
-        #         mjd = value["mjd"]
-        #         del value["mjd"]
-        #         reduced_dict.update({mjd: value})
-        #         for key in value.keys():
-        #             bands.add(key)
-        #         i += 1
+        reduced_df.insert(len(reduced_df.columns), "mean_flux", mean_flux)
+        reduced_df.insert(len(reduced_df.columns), "mean_flux_err", mean_flux_err)
 
         cmap = utilities.load_info_json("cmap")
-        # wavelengths = []
-        # freqs = []
-        # mean_fluxes = []
-        # mean_flux_errs = []
-
-        # fit_dict = {}
-        # bands_to_fit = set()
-
-        # for mjd in reduced_dict.keys():
-        #     nr_entries = len(reduced_dict[mjd])
-        #     if nr_entries < min_datapoints:
-        #         continue
-        #     else:
-        #         fit_dict.update({mjd: reduced_dict[mjd]})
-        #         for key in reduced_dict[mjd].keys():
-        #             bands_to_fit.add(key)
-
-        # bands_to_fit = list(bands_to_fit)
-
         bands_to_fit = reduced_df.telescope_band.unique()
 
         data = []
         data_err = []
+
         for mjd in reduced_df.mean_obsmjd.unique():
             fluxes = []
             flux_errs = []
@@ -117,19 +91,6 @@ class FitSpectrum:
 
         data = np.array(data)
         data_err = np.array(data_err)
-
-        #     for band in bands_to_fit:
-        #         mag = fit_dict[mjd][band][0]
-        #         mag_err = fit_dict[mjd][band][1]
-        #         flux = utilities.abmag_to_flux(mag)
-        #         flux_err = utilities.abmag_err_to_flux_err(mag, mag_err)
-        #         fluxes.append(flux)
-        #         flux_errs.append(flux_err)
-        #     data.append(fluxes)
-        #     data_err.append(flux_errs)
-
-        # data = np.array(data)
-        # data_err = np.array(data_err)
 
         wl_observed = []
         for band in bands_to_fit:
@@ -168,10 +129,12 @@ class FitSpectrum:
         )
 
         out = minimizer.minimize()
-        report_fit(out.params)
-        parameters = out.params.valuesdict()
 
-        plotmag = False
+        if "verbose" in kwargs:
+            if kwargs["verbose"]:
+                print(report_fit(out.params))
+
+        parameters = out.params.valuesdict()
 
         if self.plot:
 
@@ -248,37 +211,30 @@ class FitSpectrum:
                 extinction_av = None
                 extinction_rv = None
 
-        for key in self.magnitudes.keys():
-            if key != "mjd":
-                mag = self.magnitudes[key][0]
-                mags.append(mag)
-                mag_err = self.magnitudes[key][1]
-                flux_observed.append(utilities.abmag_to_flux(mag))
-                flux_err_observed.append(utilities.abmag_err_to_flux_err(mag, mag_err))
-                freq.append(const.c.value / (self.filter_wl[key] * 1e-10))
-                wl_observed.append(self.filter_wl[key])
+        df = self.binned_lc_df
+        mean_flux = utilities.abmag_to_flux(df.mean_mag.values)
+        mean_flux_err = utilities.abmag_err_to_flux_err(
+            df.mean_mag.values, df.mean_mag_err.values
+        )
+        df.insert(len(df.columns), "mean_flux", mean_flux)
+        df.insert(len(df.columns), "mean_flux_err", mean_flux_err)
+
+        cmap = utilities.load_info_json("cmap")
+        bands_to_fit = df.telescope_band.unique()
 
         params = Parameters()
 
         if self.fittype == "powerlaw":
             params.add("scale", value=1e-14, min=1e-20, max=1e-8)
             if alpha is None:
-                if "alpha_bound" in kwargs:
-                    alpha_bound = kwargs["alpha_bound"]
-                    params.add(
-                        "alpha",
-                        value=alpha_bound - 0.01,
-                        min=-1.5,
-                        max=alpha_bound + 0.1,
-                    )
-                else:
-                    params.add("alpha", value=-0.9, min=-1.2, max=-0.1)
+                params.add("alpha", value=-0.9, min=-1.2, max=-0.1)
         else:
             params.add("temp", value=30000, min=1000, max=150000)
             params.add("scale", value=1e23, min=1e20, max=1e25)
 
-        x = wl_observed
-        data = mags
+        wl_observed = np.asarray(df.wavelength.values)
+        data = np.asarray(df.mean_mag.values)
+        data_err = np.asarray(df.mean_mag_err.values)
 
         if self.fittype == "powerlaw":
             if alpha is not None:
@@ -292,7 +248,7 @@ class FitSpectrum:
             minimizer_fcn = self._blackbody_minimizer
 
         minimizer = Minimizer(
-            minimizer_fcn, params, fcn_args=(x, data), fcn_kws=fcn_kws,
+            minimizer_fcn, params, fcn_args=(wl_observed, [data]), fcn_kws=fcn_kws,
         )
 
         out = minimizer.minimize()
@@ -324,11 +280,7 @@ class FitSpectrum:
                 get_bolometric_flux=True,
             )
 
-        spectrum_evaluated = self._evaluate_spectrum(spectrum, self.magnitudes)
-
-        magnitudes_outdict = spectrum_evaluated[0]
-        reduced_chisquare = spectrum_evaluated[1]
-        residuals = spectrum_evaluated[2]
+        df, red_chisq = self._evaluate_spectrum(spectrum, df)
 
         # Calculate bolometric luminosity
         if self.fittype == "blackbody":
@@ -342,10 +294,10 @@ class FitSpectrum:
         if self.plot:
             if self.fittype == "powerlaw":
                 annotations = {
-                    "mjd": self.magnitudes["mjd"],
+                    "mjd": df["mean_obsmjd"].values[0],
                     "scale": parameters["scale"],
                     "scale_err": out.params["scale"].stderr,
-                    "reduced_chisquare": reduced_chisquare,
+                    "reduced_chisquare": red_chisq,
                 }
                 if alpha is not None:
                     annotations.update({"alpha": alpha})
@@ -361,13 +313,13 @@ class FitSpectrum:
 
             else:
                 annotations = {
-                    "mjd": self.magnitudes["mjd"],
+                    "mjd": df["mean_obsmjd"].values[0],
                     "temperature": parameters["temp"],
                     "scale": parameters["scale"],
-                    "reduced_chisquare": reduced_chisquare,
+                    "reduced_chisquare": red_chisq,
                     "bolometric_luminosity": bolo_lumi,
                 }
-            plot.plot_sed_from_dict(magnitudes_outdict, spectrum, annotations)
+            plot.plot_sed(df, spectrum, annotations, plotmag=True)
 
         luminosity_uv_optical = utilities.calculate_luminosity(
             spectrum,
@@ -386,8 +338,8 @@ class FitSpectrum:
             returndict = {
                 "scale": parameters["scale"],
                 "scale_err": out.params["scale"].stderr,
-                "mjd": self.magnitudes["mjd"],
-                "red_chisq": reduced_chisquare,
+                "mjd": df["mean_obsmjd"].values[0],
+                "red_chisq": red_chisq,
                 "red_chisq_binfit": out.redchi,
                 "luminosity_uv_optical": luminosity_uv_optical.value,
                 "luminosity_uv_nir": luminosity_uv_nir.value,
@@ -420,7 +372,9 @@ class FitSpectrum:
             }
 
     @staticmethod
-    def _evaluate_spectrum(spectrum, magnitudes: dict = None):
+    def _evaluate_spectrum(spectrum, df):
+
+        return_df = pd.DataFrame()
 
         magnitudes_outdict = {}
         filter_wl = utilities.load_info_json("filter_wl")
@@ -430,36 +384,24 @@ class FitSpectrum:
         mag_model_list = []
         mag_obs_err_list = []
 
-        for key in magnitudes.keys():
-            if key != "mjd":
-                mag = magnitudes[key][0]
-                mag_err = magnitudes[key][1]
-                wl = filter_wl[key]
-                mag_model = utilities.magnitude_in_band(key, spectrum)
-                temp = {
-                    key: {
-                        "observed": mag,
-                        "observed_err": mag_err,
-                        "model": mag_model,
-                        "wavelength": filter_wl[key],
-                        "frequency": const.c.value / (filter_wl[key] * 1e-10),
-                    }
-                }
-                magnitudes_outdict.update(temp)
-                index += 1
-                mag_obs_list.append(mag)
-                mag_model_list.append(mag_model)
-                mag_obs_err_list.append(mag_err)
+        mags_model = []
+
+        for index, row in df.iterrows():
+            mags_model.append(
+                utilities.magnitude_in_band(row["telescope_band"], spectrum)
+            )
+        df.insert(len(df.columns), "mag_model", mags_model)
+        df.insert(len(df.columns), "residual", df.mag_model - df.mean_mag)
 
         # Calculate reduced chisquare
         chisquare = 0
 
-        for index, mag_model in enumerate(mag_model_list):
-            chisquare += (mag_model - mag_obs_list[index]) ** 2 / mag_obs_err_list[
-                index
-            ] ** 2
+        for index, mag_model in enumerate(list(df.mag_model.values)):
+            chisquare += (mag_model - list(df.mean_mag.values)[index]) ** 2 / list(
+                df.mean_mag_err.values
+            )[index] ** 2
 
-        dof = len(mag_model_list) - 2
+        dof = len(df.mag_model) - 2
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -471,7 +413,7 @@ class FitSpectrum:
             res = magnitudes_outdict[key]["model"] - magnitudes_outdict[key]["observed"]
             residuals.append(res)
 
-        return magnitudes_outdict, reduced_chisquare, residuals
+        return df, reduced_chisquare
 
     @staticmethod
     def _blackbody_minimizer(params, x, data=None, **kwargs):

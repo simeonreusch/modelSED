@@ -516,3 +516,106 @@ def plot_temperature(fitparams, **kwargs):
     ax2.plot(mjds, radii, color="red")
     plt.savefig(f"plots/temperature_radius.png")
     plt.close()
+
+
+def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kwargs):
+    """ """
+    if "temperature" in annotations.keys():
+        outpath = os.path.join("plots", "blackbody")
+    elif "alpha" in annotations.keys():
+        outpath = os.path.join("plots", "powerlaw")
+    else:
+        outpath = "plots"
+
+    if not os.path.exists(outpath):
+        os.makedirs(outpath)
+
+    frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
+    spectrum_mags = []
+
+    plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=300)
+    ax1 = plt.subplot(111)
+    plt.xscale("log")
+
+    if not plotmag:
+        ax1.set_ylabel(r"$F_\nu~[$erg$~/~ s \cdot $cm$^2 \cdot$ Hz]")
+        ax1.set_xlabel(r"$\nu$ [Hz]")
+        plt.yscale("log")
+        ax1.set_ylim([2e-28, 4e-27])
+        ax1.set_xlim([3.5e14, 2e15])
+        if "alpha" in annotations.keys():
+            alpha = annotations["alpha"]
+        if "alpha_err" in annotations.keys():
+            alpha_err = annotations["alpha_err"]
+
+        ax1.plot(frequencies.value, spectrum._flux, color="black")
+
+        for index, row in df.iterrows():
+            ax1.errorbar(
+                utilities.lambda_to_nu(row.wavelength),
+                row["mean_flux"],
+                row["mean_flux_err"],
+                color=cmap[row.telescope_band],
+                fmt=".",
+                label=filterlabel[row.telescope_band],
+            )
+        ax2 = ax1.secondary_xaxis(
+            "top", functions=(utilities.lambda_to_nu, utilities.nu_to_lambda)
+        )
+        ax2.set_xlabel(r"$\lambda~[\AA]$")
+    else:
+        ax1.set_ylabel("Magnitude [AB]")
+        ax1.set_xlabel(r"$\lambda$")
+        ax1.invert_yaxis()
+        ax1.set_ylim([21, 17])
+        ax1.plot(spectrum.wave, utilities.flux_to_abmag(spectrum._flux))
+
+        for index, row in df.iterrows():
+            ax1.errorbar(
+                row.wavelength,
+                row["mean_mag"],
+                row["mean_mag_err"],
+                color=cmap[row.telescope_band],
+                fmt=".",
+                label=filterlabel[row.telescope_band],
+            )
+        ax2 = ax1.secondary_xaxis(
+            "top", functions=(utilities.nu_to_lambda, utilities.lambda_to_nu)
+        )
+        ax2.set_xlabel(r"$\nu$ [Hz]")
+
+    bbox = dict(boxstyle="round", fc="none", ec="black")
+    bbox2 = dict(boxstyle="round", fc="none", ec="blue")
+
+    if annotations:
+        annotationstr = ""
+        if "alpha" in annotations.keys():
+            alpha = annotations["alpha"]
+            annotationstr += f"Spectral index $\\alpha$={alpha:.3f}\n"
+        if "temperature" in annotations.keys():
+            temperature = annotations["temperature"]
+            annotationstr += f"temperature={temperature:.2E}\n"
+        if "scale" in annotations.keys():
+            scale = annotations["scale"]
+            annotationstr += f"normalization $\\beta$={scale:.2E}\n"
+        if "mjd" in annotations.keys():
+            mjd = annotations["mjd"]
+            annotationstr += f"MJD={mjd:.2f}\n"
+        if "bolometric_luminosity" in annotations.keys():
+            bolometric_luminosity = annotations["bolometric_luminosity"]
+            annotationstr += f"bol. lum.={bolometric_luminosity:.2E}\n"
+
+        if annotationstr.endswith("\n"):
+            annotationstr = annotationstr[:-2]
+
+        if not plotmag:
+            annotation_location = (0.7e15, 1.5e-26)
+        else:
+            annotation_location = (2e4, 18.0)
+
+        ax1.legend(
+            fontsize=FONTSIZE, fancybox=True, edgecolor="black", loc=0,
+        )
+
+    plt.savefig(os.path.join(outpath, f"{mjd}.png"))
+    plt.close()

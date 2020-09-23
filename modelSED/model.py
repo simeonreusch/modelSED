@@ -67,14 +67,19 @@ class SED:
 
         return None
 
-    def fit_one_bin(self, mags: dict, **kwargs):
+    def fit_one_bin(self, binned_lc_df, **kwargs):
         """ """
-        fit = FitSpectrum(mags, self.fittype, self.redshift)
+        fit = FitSpectrum(binned_lc_df, self.fittype, self.redshift)
         fitresult = fit.fit_bin(**kwargs)
 
         return fitresult
 
-    def get_mean_magnitudes(self, bands: list = None):
+    def get_mean_magnitudes(
+        self,
+        bands: list = None,
+        min_bands_per_bin: list = None,
+        neccessary_bands: list = None,
+    ):
         """ """
         if self.path_to_lightcurve is None:
             self.path_to_lightcurve = os.path.join(self.lc_dir, "full_lc_fp.csv")
@@ -89,19 +94,23 @@ class SED:
 
         mjd_iter = np.linspace(mjd_min, mjd_max, num=self.nbins + 1)
 
-        slices = {}
-
         if bands is None:
-            exclude_bands = []
+            bands_to_fit = list(self.filter_wl.keys())
         else:
-            exclude_bands = np.setdiff1d(list(self.filter_wl), bands)
+            bands_to_fit = bands
+
+        if min_bands_per_bin is None:
+            min_bands_per_bin = 2
+
+        if neccessary_bands is None:
+            neccessary_bands = []
 
         lc["telescope_band"] = lc.telescope + "+" + lc.band
-        lc = lc[~lc.telescope_band.isin(exclude_bands)]
+        lc = lc[lc.telescope_band.isin(bands_to_fit)]
         lc.reset_index(inplace=True)
         lc.drop(columns=["index"], inplace=True)
 
-        result_df = pd.DataFrame()
+        temp_df = pd.DataFrame()
 
         for index, mjd in enumerate(mjd_iter):
             if index != len(mjd_iter) - 1:
@@ -115,7 +124,7 @@ class SED:
                     entries = len(_df["mag"].values)
                     mean_obsmjd = np.mean([mjd_iter[index], mjd_iter[index + 1]])
                     wavelength = self.filter_wl[telescope_band]
-                    result_df = result_df.append(
+                    temp_df = temp_df.append(
                         {
                             "telescope_band": telescope_band,
                             "wavelength": wavelength,
@@ -127,31 +136,16 @@ class SED:
                         ignore_index=True,
                     )
 
-        # print(result_df)
+        result_df = pd.DataFrame()
 
-        # # bin in mjd
-        # for index, mjd in enumerate(mjd_iter):
-        #     if index != len(mjd_iter) - 1:
-        #         instrumentfilters = {}
-        #         df = lc.query(f"mjd >= {mjd_iter[index]} and mjd < {mjd_iter[index+1]}")
-        #         for instrument in df.instrument.unique():
-        #             for band in df.query("instrument == @instrument")[
-        #                 "filter"
-        #             ].unique():
-        #                 mag = df.query("instrument == @instrument and filter == @band")[
-        #                     "magpsf"
-        #                 ].values
-        #                 mag_err = df.query(
-        #                     "instrument == @instrument and filter == @band"
-        #                 )["sigmamagpsf"].values
-        #                 mean_mag = np.mean(mag)
-        #                 mean_mag_err = np.sqrt(np.sum(mag_err ** 2)) / len(mag_err)
-        #                 combin = {f"{instrument}_{band}": [mean_mag, mean_mag_err]}
-        #                 if not f"{instrument}_{band}" in exclude_bands:
-        #                     instrumentfilters.update(combin)
-        #         instrumentfilters.update({"mjd": mjd})
-        #         slices.update({index: instrumentfilters})
-        # print(slices)
+        # Now we apply our min_bands_per_bin and neccessary_bands criteria
+        for mjd in temp_df.mean_obsmjd.unique():
+            _df = temp_df.query(f"mean_obsmjd == {mjd}")
+            if len(_df) >= min_bands_per_bin and set(neccessary_bands).issubset(
+                _df.telescope_band.unique()
+            ):
+                result_df = result_df.append(_df, ignore_index=True)
+
         return result_df
 
     def fit_bins(
@@ -162,42 +156,41 @@ class SED:
         print(f"Fitting {self.nbins} time bins.\n")
 
         if "bands" in kwargs:
-            mean_mags = self.get_mean_magnitudes(bands=kwargs["bands"])
             if min_bands_per_bin is None:
                 min_bands_per_bin = len(kwargs["bands"])
             print(f"Bands which are fitted: {kwargs['bands']}")
         else:
-            mean_mags = self.get_mean_magnitudes()
             if min_bands_per_bin is None:
                 min_bands_per_bin = 2
             print(f"Fitting all bands")
+
+        if not neccessary_bands:
+            neccessary_bands = []
+            print("No band MUST be present in each bin to be fit")
+        else:
+            print(f"{neccessary_bands} MUST be present in each bin to be fit")
 
         print(
             f"At least {min_bands_per_bin} bands must be present in each bin to be fit"
         )
 
-        if neccessary_bands:
-            print(f"{neccessary_bands} must be present in each bin to be fit")
+        binned_lc_df = self.get_mean_magnitudes(
+            bands=bands,
+            min_bands_per_bin=min_bands_per_bin,
+            neccessary_bands=neccessary_bands,
+        )
 
         fitparams = {}
 
-        progress_bar = ProgressBar(len(mean_mags))
+        progress_bar = ProgressBar(len(binned_lc_df.mean_obsmjd.unique()))
 
-        i = 0
-        for index, entry in enumerate(mean_mags):
-            if len(mean_mags[entry]) > min_bands_per_bin:
-                if neccessary_bands:  # and mean_mags[entry]["mjd"] > 58670:
-                    if all(band in mean_mags[entry] for band in neccessary_bands):
-                        result = self.fit_one_bin(mean_mags[entry], **kwargs)
-                        fitparams.update({i: result})
-                        i += 1
-                else:
-                    result = self.fit_one_bin(mean_mags[entry], **kwargs)
-                    fitparams.update({i: result})
-                    i += 1
-
+        for index, mjd in enumerate(binned_lc_df.mean_obsmjd.unique()):
+            _df = binned_lc_df.query(f"mean_obsmjd == {mjd}")
+            result = self.fit_one_bin(binned_lc_df=_df, **kwargs)
+            fitparams.update({index: result})
             progress_bar.update(index)
-        progress_bar.update(len(mean_mags))
+
+        progress_bar.update(len(binned_lc_df.mean_obsmjd.unique()))
 
         with open(os.path.join(self.fit_dir, f"{self.fittype}.json"), "w") as outfile:
             json.dump(fitparams, outfile)
@@ -268,30 +261,17 @@ if __name__ == "__main__":
 
     redshift = 0.2666
 
-    bands_for_global_fit = [
+    bands = [
         "P48+ZTF_g",
         "P48+ZTF_r",
         "P48+ZTF_i",
-        #  "Swift+UVW2",
-        # "Swift+UVW1",
         "Swift+UVM2",
-    ]
-    with_p200 = [
-        "P48+ZTF_g",
-        "P48+ZTF_r",
-        "P48+ZTF_i",
-        # "Swift+UVW2",
-        # "Swift+UVW1",
-        "Swift+UVM2",
-        # "P200+J",
-        # "P200+H",
-        # "P200+Ks",
     ]
 
     nbins = 60
 
-    fittype = "blackbody"
-    fitglobal = True
+    fittype = "powerlaw"
+    fitglobal = False
     fitlocal = True
 
     path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
@@ -303,16 +283,15 @@ if __name__ == "__main__":
         path_to_lightcurve=path_to_lightcurve,
     )
     if fitglobal:
-        sed.fit_global(bands=bands_for_global_fit, plot=True)
+        sed.fit_global(bands=bands, plot=False)
     sed.load_global_fitparams()
 
-    quit()
     if fitlocal:
         if fittype == "powerlaw":
             sed.fit_bins(
                 alpha=sed.fitparams_global["alpha"],
                 alpha_err=sed.fitparams_global["alpha_err"],
-                bands=bands_for_global_fit,
+                bands=bands,
                 min_bands_per_bin=2,
                 # neccessary_bands=["Swift+UVM2"],
                 verbose=False,
@@ -323,7 +302,7 @@ if __name__ == "__main__":
                 extinction_av_err=sed.fitparams_global["extinction_av_err"],
                 extinction_rv=sed.fitparams_global["extinction_rv"],
                 extinction_rv_err=sed.fitparams_global["extinction_rv_err"],
-                bands=bands_for_global_fit,
+                bands=bands,
                 min_bands_per_bin=2,
                 neccessary_bands=["Swift+UVM2"],
                 verbose=False,
