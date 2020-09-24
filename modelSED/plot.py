@@ -256,27 +256,6 @@ def plot_sed_from_dict(
             loc=0,
         )
 
-        # # more ugly hack
-        # annotationstr_powerlaw = "powerlaw fit"
-        # annotationstr_blackbody = "blackbody fit"
-        # annotationstr_powerlaw_loc = (1.5e14, 1.0e-27)
-        # annotationstr_blackbody_loc = (1.5e14, 3e-28)
-        # plt.annotate(
-        #     annotationstr_powerlaw,
-        #     annotationstr_powerlaw_loc,
-        #     fontsize=FONTSIZE,
-        #     color="black",
-        #     bbox=bbox,
-        # )
-        # plt.annotate(
-        #     annotationstr_blackbody,
-        #     annotationstr_blackbody_loc,
-        #     fontsize=FONTSIZE,
-        #     color="blue",
-        #     bbox=bbox2,
-        # )
-        # # end of ugly hack
-
     plt.savefig(os.path.join(outpath, f"{mjd}.png"))
     plt.close()
 
@@ -322,7 +301,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         ax1.set_ylabel("Intrinsic luminosity [erg/s]")
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
-        ax1.legend()
+        ax1.legend(fontsize=FONTSIZE)
 
     plt.tight_layout()
     plt.savefig(f"plots/luminosity_{fittype}.png")
@@ -439,7 +418,7 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                 alpha_errs.add(alpha_err)
             if len(alphas) == 1:
                 plt.title(
-                    f"Spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}"
+                    f"Powerlaw spectrum fit, spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}"
                 )
 
         if fittype == "blackbody":
@@ -456,16 +435,16 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                 extinction_rvs.add(rv)
                 extinction_av_errs.add(av_err)
                 extinction_rv_errs.add(rv_err)
-            title = "Blackbody spectrum fit, "
+            title = "BB spectrum fit, "
             if len(extinction_avs) == 1:
-                title += f"extinction $A_V$ = {list(extinction_avs)[0]:.2f} $\pm$ {list(extinction_av_errs)[0]:.2f}"
+                title += f"ext. $A_V$ = {list(extinction_avs)[0]:.2f} $\pm$ {list(extinction_av_errs)[0]:.2f}"
             if len(extinction_rvs) == 1:
                 title += f", $R_V$ = {list(extinction_rvs)[0]:.2f} $\pm$ {list(extinction_rv_errs)[0]:.2f}"
 
             if len(title) > 0:
                 plt.title(title)
 
-    plt.legend(fontsize=ANNOTATION_FONTSIZE)
+    plt.legend(fontsize=FONTSIZE)
     plt.tight_layout()
     if fitparams:
         plt.savefig(f"plots/lightcurve_{fittype}.png")

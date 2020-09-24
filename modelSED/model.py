@@ -275,7 +275,7 @@ if __name__ == "__main__":
 
     nbins = 60
 
-    fittype = "powerlaw"
+    fittype = "blackbody"
     fitglobal = False
     fitlocal = False
 

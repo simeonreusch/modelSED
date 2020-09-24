@@ -442,9 +442,15 @@ class FitSpectrum:
         ab_model_list = []
         flux_model_list = []
 
-        for i in x:
-            ab_model = utilities.magnitude_in_band(wl_filter[i], spectrum)
-            ab_model_list.append(ab_model)
+        for wl in x:
+            for index, _wl in enumerate(spectrum.wave):
+                if _wl > wl:
+                    ab_model = utilities.flux_to_abmag(spectrum.flux[index])
+                    ab_model_list.append(ab_model)
+                    break
+        # for i in x:
+        #     ab_model = utilities.magnitude_in_band(wl_filter[i], spectrum)
+        #     ab_model_list.append(ab_model)
 
         if data:
             return np.asarray(ab_model_list) - np.asarray(data)
