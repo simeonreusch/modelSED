@@ -58,6 +58,8 @@ class SED:
 
         self.cmap = utilities.load_info_json("cmap")
         self.filter_wl = utilities.load_info_json("filter_wl")
+
+        self.read_lightcurve()
         print(
             f"Initialized with {self.nbins} time slices, redshift={self.redshift} and fittype={self.fittype}"
         )
@@ -81,12 +83,7 @@ class SED:
         neccessary_bands: list = None,
     ):
         """ """
-        if self.path_to_lightcurve is None:
-            self.path_to_lightcurve = os.path.join(self.lc_dir, "full_lc_fp.csv")
-
-        lc = pd.read_csv(self.path_to_lightcurve)
-
-        lc.drop(columns=["Unnamed: 0"], inplace=True)
+        lc = self.lc
 
         mjds = lc.obsmjd.values
         mjd_min = np.min(mjds)
@@ -105,7 +102,6 @@ class SED:
         if neccessary_bands is None:
             neccessary_bands = []
 
-        lc["telescope_band"] = lc.telescope + "+" + lc.band
         lc = lc[lc.telescope_band.isin(bands_to_fit)]
         lc.reset_index(inplace=True)
         lc.drop(columns=["index"], inplace=True)
@@ -230,12 +226,10 @@ class SED:
             json.dump(result, outfile)
             return result
 
-    def plot_lightcurve(self, **kwargs):
+    def plot_lightcurve(self, bands, **kwargs):
         """" """
-        fitparams = self.fitparams
-        lc_file = os.path.join(self.lc_dir, "full_lc_fp_without_p200.csv")
         plot.plot_lightcurve(
-            lc_file, self.fitparams, self.fittype, self.redshift, **kwargs
+            self.lc, bands, self.fitparams, self.fittype, self.redshift, **kwargs
         )
 
     def plot_luminosity(self, **kwargs):
@@ -256,6 +250,17 @@ class SED:
             fitparams_global = json.load(json_file)
         self.fitparams_global = fitparams_global
 
+    def read_lightcurve(self):
+        if self.path_to_lightcurve is None:
+            self.path_to_lightcurve = os.path.join(self.lc_dir, "full_lc_fp.csv")
+
+        lc = pd.read_csv(self.path_to_lightcurve)
+        lc.drop(columns=["Unnamed: 0"], inplace=True)
+
+        lc.insert(len(lc.columns), "telescope_band", lc.telescope + "+" + lc.band)
+
+        self.lc = lc
+
 
 if __name__ == "__main__":
 
@@ -271,7 +276,7 @@ if __name__ == "__main__":
     nbins = 60
 
     fittype = "powerlaw"
-    fitglobal = False
+    fitglobal = True
     fitlocal = True
 
     path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
@@ -308,7 +313,7 @@ if __name__ == "__main__":
                 verbose=False,
             )
     sed.load_fitparams()
-    sed.plot_lightcurve(bands=bands_for_global_fit)
+    sed.plot_lightcurve(bands=bands)
     # sed.plot_lightcurve(bands=with_p200)
     # if fittype == "blackbody":
     #     sed.plot_temperature()

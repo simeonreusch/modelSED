@@ -11,7 +11,7 @@ from astropy import constants as const
 from scipy.interpolate import UnivariateSpline
 import utilities, sncosmo_spectral_v13
 
-FIG_WIDTH = 8
+FIG_WIDTH = 6
 FONTSIZE = 10
 ANNOTATION_FONTSIZE = 8
 
@@ -299,7 +299,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
             bolo_lumi.append(fitparams[entry]["bolometric_luminosity"])
             radius.append(fitparams[entry]["radius"])
 
-    plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=300)
     ax1 = plt.subplot(111)
     ax1.set_xlabel("MJD")
 
@@ -324,44 +324,46 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
         ax1.legend()
 
+    plt.tight_layout()
     plt.savefig(f"plots/luminosity_{fittype}.png")
     plt.close()
 
 
-def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
+def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kwargs):
     """ """
     filter_wl = utilities.load_info_json("filter_wl")
     cmap = utilities.load_info_json("cmap")
-    lc = pd.read_csv(datafile)
 
-    mjds = lc.mjd.values
+    mjds = df.obsmjd.values
     mjd_min = np.min(mjds)
     mjd_max = np.max(mjds)
 
-    plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=300)
     ax1 = plt.subplot(111)
-    ax1.set_ylabel("Magnitude (AB)")
+    ax1.set_ylabel("Magnitude [AB]")
     ax1.set_xlabel("MJD")
     ax1.invert_yaxis()
 
-    if "bands" in kwargs:
-        exclude_bands = np.setdiff1d(list(filter_wl), kwargs["bands"])
+    if bands is None:
+        bands_to_plot = df.band.unique()
     else:
-        exclude_bands = []
+        bands_to_plot = bands
+
+    if fitparams:
+        alpha = 0.2
+    else:
+        alpha = 1
 
     for key in filter_wl.keys():
-        if not key in exclude_bands:
-            instrumentfilter = key.split("_")
-            df = lc.query(
-                f"instrument == '{instrumentfilter[0]}' and filter == '{instrumentfilter[1]}'"
-            )
+        if key in bands_to_plot:
+            _df = df.query(f"telescope_band == '{key}'")
             ax1.errorbar(
-                df.mjd,
-                df.magpsf,
-                df.sigmamagpsf,
+                _df.obsmjd,
+                _df.mag,
+                _df.mag_err,
                 color=cmap[key],
                 fmt=".",
-                alpha=0.2,
+                alpha=alpha,
                 edgecolors=None,
                 label=filterlabel[key],
             )
@@ -371,128 +373,113 @@ def plot_lightcurve(datafile, fitparams, fittype, redshift, **kwargs):
     frequencies = const.c.value / (wavelengths.value * 1e-10)
     df_model = pd.DataFrame(columns=["mjd", "band", "mag"])
 
-    for entry in fitparams:
+    if fitparams:
+        for entry in fitparams:
 
-        if fittype == "powerlaw":
-            alpha = fitparams[entry]["alpha"]
-            alpha_err = fitparams[entry]["alpha_err"]
-            scale = fitparams[entry]["scale"]
-            scale_err = fitparams[entry]["scale_err"]
-            flux_nu = (frequencies ** alpha * scale) * u.erg / u.cm ** 2 * u.Hz / u.s
-            flux_nu_err = utilities.powerlaw_error_prop(
-                frequencies, alpha, alpha_err, scale, scale_err
-            )
-            spectrum = sncosmo_spectral_v13.Spectrum(
-                wave=wavelengths, flux=flux_nu, unit=utilities.FNU
-            )
-            spectrum_upper = sncosmo_spectral_v13.Spectrum(
-                wave=wavelengths, flux=(flux_nu + flux_nu_err), unit=utilities.FNU
-            )
-            spectrum_lower = sncosmo_spectral_v13.Spectrum(
-                wave=wavelengths, flux=(flux_nu - flux_nu_err), unit=utilities.FNU
-            )
-
-        if fittype == "blackbody":
-            spectrum = utilities.blackbody_spectrum(
-                temperature=fitparams[entry]["temperature"],
-                scale=fitparams[entry]["scale"],
-                redshift=redshift,
-                extinction_av=fitparams[entry]["extinction_av"],
-                extinction_rv=fitparams[entry]["extinction_rv"],
-            )
-
-        for band in filter_wl.keys():
-            if not band in exclude_bands:
-                mag = utilities.magnitude_in_band(band, spectrum)
-                # mag_upper = utilities.magnitude_in_band(band, spectrum_upper)
-                # mag_lower = utilities.magnitude_in_band(band, spectrum_lower)
-                df_model = df_model.append(
-                    {
-                        "mjd": fitparams[entry]["mjd"],
-                        "band": band,
-                        "mag": mag,
-                        # "mag_upper": mag_upper,
-                        # "mag_lower": mag_lower,
-                    },
-                    ignore_index=True,
+            if fittype == "powerlaw":
+                alpha = fitparams[entry]["alpha"]
+                alpha_err = fitparams[entry]["alpha_err"]
+                scale = fitparams[entry]["scale"]
+                scale_err = fitparams[entry]["scale_err"]
+                flux_nu = (
+                    (frequencies ** alpha * scale) * u.erg / u.cm ** 2 * u.Hz / u.s
+                )
+                flux_nu_err = utilities.powerlaw_error_prop(
+                    frequencies, alpha, alpha_err, scale, scale_err
+                )
+                spectrum = sncosmo_spectral_v13.Spectrum(
+                    wave=wavelengths, flux=flux_nu, unit=utilities.FNU
+                )
+                spectrum_upper = sncosmo_spectral_v13.Spectrum(
+                    wave=wavelengths, flux=(flux_nu + flux_nu_err), unit=utilities.FNU
+                )
+                spectrum_lower = sncosmo_spectral_v13.Spectrum(
+                    wave=wavelengths, flux=(flux_nu - flux_nu_err), unit=utilities.FNU
                 )
 
-    for key in filter_wl.keys():
-        if not key in exclude_bands:
-            df_model_band = df_model.query(f"band == '{key}'")
-            spline = UnivariateSpline(
-                df_model_band.mjd.values, df_model_band.mag.values
-            )
-            # spline_upper = UnivariateSpline(
-            #     df_model_band.mjd.values, df_model_band.mag_upper.values
-            # )
-            # spline_lower = UnivariateSpline(
-            #     df_model_band.mjd.values, df_model_band.mag_lower.values
-            # )
-            spline.set_smoothing_factor(0.001)
-            # spline_upper.set_smoothing_factor(0.001)
-            # spline_lower.set_smoothing_factor(0.001)
-            ax1.plot(
-                df_model_band.mjd.values,
-                spline(df_model_band.mjd.values),
-                color=cmap[key],
-            )
-            # ax1.plot(
-            #     df_model_band.mjd.values,
-            #     spline_upper(df_model_band.mjd.values),
-            #     color=cmap[key],
-            # )
-            # ax1.plot(
-            #     df_model_band.mjd.values,
-            #     spline_lower(df_model_band.mjd.values),
-            #     color=cmap[key],
-            # )
-            # ax1.fill_between(
-            #     df_model_band.mjd.values,
-            #     spline_lower(df_model_band.mjd.values),
-            #     spline_upper(df_model_band.mjd.values),
-            #     color=cmap[key],
-            #     alpha=0.2,
-            # )
+            if fittype == "blackbody":
+                spectrum = utilities.blackbody_spectrum(
+                    temperature=fitparams[entry]["temperature"],
+                    scale=fitparams[entry]["scale"],
+                    redshift=redshift,
+                    extinction_av=fitparams[entry]["extinction_av"],
+                    extinction_rv=fitparams[entry]["extinction_rv"],
+                )
 
-    if fittype == "powerlaw":
-        alphas = set()
-        alpha_errs = set()
-        for entry in fitparams:
-            alpha = fitparams[entry]["alpha"]
-            alpha_err = fitparams[entry]["alpha_err"]
-            alphas.add(alpha)
-            alpha_errs.add(alpha_err)
-        if len(alphas) == 1:
-            plt.title(
-                f"Spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}"
-            )
+            for band in filter_wl.keys():
+                if band in bands_to_plot:
+                    mag = utilities.magnitude_in_band(band, spectrum)
+                    # mag_upper = utilities.magnitude_in_band(band, spectrum_upper)
+                    # mag_lower = utilities.magnitude_in_band(band, spectrum_lower)
+                    df_model = df_model.append(
+                        {
+                            "mjd": fitparams[entry]["mjd"],
+                            "band": band,
+                            "mag": mag,
+                            # "mag_upper": mag_upper,
+                            # "mag_lower": mag_lower,
+                        },
+                        ignore_index=True,
+                    )
 
-    if fittype == "blackbody":
-        extinction_avs = set()
-        extinction_rvs = set()
-        extinction_av_errs = set()
-        extinction_rv_errs = set()
-        for entry in fitparams:
-            av = fitparams[entry]["extinction_av"]
-            rv = fitparams[entry]["extinction_rv"]
-            av_err = fitparams[entry]["extinction_av_err"]
-            rv_err = fitparams[entry]["extinction_rv_err"]
-            extinction_avs.add(av)
-            extinction_rvs.add(rv)
-            extinction_av_errs.add(av_err)
-            extinction_rv_errs.add(rv_err)
-        title = "Blackbody spectrum fit, "
-        if len(extinction_avs) == 1:
-            title += f"extinction $A_V$ = {list(extinction_avs)[0]:.2f} $\pm$ {list(extinction_av_errs)[0]:.2f}"
-        if len(extinction_rvs) == 1:
-            title += f", $R_V$ = {list(extinction_rvs)[0]:.2f} $\pm$ {list(extinction_rv_errs)[0]:.2f}"
+        for key in filter_wl.keys():
+            if key in bands_to_plot:
+                df_model_band = df_model.query(f"band == '{key}'")
+                spline = UnivariateSpline(
+                    df_model_band.mjd.values, df_model_band.mag.values
+                )
 
-        if len(title) > 0:
-            plt.title(title)
+                spline.set_smoothing_factor(0.001)
+
+                ax1.plot(
+                    df_model_band.mjd.values,
+                    spline(df_model_band.mjd.values),
+                    color=cmap[key],
+                )
+
+        if fittype == "powerlaw":
+            alphas = set()
+            alpha_errs = set()
+            for entry in fitparams:
+                alpha = fitparams[entry]["alpha"]
+                alpha_err = fitparams[entry]["alpha_err"]
+                alphas.add(alpha)
+                alpha_errs.add(alpha_err)
+            if len(alphas) == 1:
+                plt.title(
+                    f"Spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}"
+                )
+
+        if fittype == "blackbody":
+            extinction_avs = set()
+            extinction_rvs = set()
+            extinction_av_errs = set()
+            extinction_rv_errs = set()
+            for entry in fitparams:
+                av = fitparams[entry]["extinction_av"]
+                rv = fitparams[entry]["extinction_rv"]
+                av_err = fitparams[entry]["extinction_av_err"]
+                rv_err = fitparams[entry]["extinction_rv_err"]
+                extinction_avs.add(av)
+                extinction_rvs.add(rv)
+                extinction_av_errs.add(av_err)
+                extinction_rv_errs.add(rv_err)
+            title = "Blackbody spectrum fit, "
+            if len(extinction_avs) == 1:
+                title += f"extinction $A_V$ = {list(extinction_avs)[0]:.2f} $\pm$ {list(extinction_av_errs)[0]:.2f}"
+            if len(extinction_rvs) == 1:
+                title += f", $R_V$ = {list(extinction_rvs)[0]:.2f} $\pm$ {list(extinction_rv_errs)[0]:.2f}"
+
+            if len(title) > 0:
+                plt.title(title)
 
     plt.legend(fontsize=ANNOTATION_FONTSIZE)
-    plt.savefig(f"plots/lightcurve_{fittype}.png")
+    plt.tight_layout()
+    if fitparams:
+        plt.savefig(f"plots/lightcurve_{fittype}.png")
+    else:
+        plt.savefig(f"plots/lightcurve.png")
+
     plt.close()
 
 
