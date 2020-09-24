@@ -480,7 +480,7 @@ class FitSpectrum:
         flux_list = []
 
         for wl in x:
-            ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+            # ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
             for index, _wl in enumerate(spectrum.wave):
                 if _wl > wl:
                     ab_model = utilities.flux_to_abmag(spectrum.flux[index])
@@ -542,9 +542,16 @@ class FitSpectrum:
 
                 fluxes = []
                 for wl in x:
-                    ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
-                    flux = utilities.abmag_to_flux(ab_model)
-                    fluxes.append(flux)
+                    # ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+                    for index, _wl in enumerate(spectrum.wave):
+                        if _wl > wl:
+                            ab_model = utilities.flux_to_abmag(spectrum.flux[index])
+                            flux = utilities.abmag_to_flux(ab_model)
+                            fluxes.append(flux)
+                            break
+                # for wl in x:
+                #     ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+
                 if data_err is None:
                     residual[i, :] = data[i, :] - fluxes
                 else:
@@ -570,16 +577,20 @@ class FitSpectrum:
                 fluxes = []
 
                 for wl in x:
-                    ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
-                    flux = utilities.abmag_to_flux(ab_model)
-                    fluxes.append(flux)
+                    for index, _wl in enumerate(spectrum.wave):
+                        if _wl > wl:
+                            ab_model = utilities.flux_to_abmag(spectrum.flux[index])
+                            flux = utilities.abmag_to_flux(ab_model)
+                            fluxes.append(flux)
+                            break
+                    # ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
                 if data_err is None:
                     residual[i, :] = data[i, :] - fluxes
                 else:
                     residual[i, :] = (data[i, :] - fluxes) / data_err[i, :]
 
         flattened_residual = residual.flatten()
-        print(flattened_residual)
+
         print(f"mean residual = {np.mean(flattened_residual)}")
         return flattened_residual
 
