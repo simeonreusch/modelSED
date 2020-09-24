@@ -14,6 +14,7 @@ import utilities, sncosmo_spectral_v13
 FIG_WIDTH = 6
 FONTSIZE = 10
 ANNOTATION_FONTSIZE = 8
+DPI = 400
 
 cmap = utilities.load_info_json("cmap")
 filter_wl = utilities.load_info_json("filter_wl")
@@ -42,7 +43,7 @@ def plot_sed_from_flux(
         wl_observed.append(filter_wl[band])
 
     freq_observed = const.c.value / (np.array(wl_observed) * 1e-10)
-    plt.figure(figsize=(8, 0.75 * 8), dpi=300)
+    plt.figure(figsize=(8, 0.75 * 8), dpi=DPI)
     ax1 = plt.subplot(111)
     ax1.invert_yaxis()
 
@@ -154,7 +155,7 @@ def plot_sed_from_dict(
     #     spectrum_mags_bb.append(spectrum_mag)
     # # end of ugly hack
 
-    plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     plt.xscale("log")
 
@@ -278,7 +279,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
             bolo_lumi.append(fitparams[entry]["bolometric_luminosity"])
             radius.append(fitparams[entry]["radius"])
 
-    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     ax1.set_xlabel("MJD")
 
@@ -317,7 +318,7 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
     mjd_min = np.min(mjds)
     mjd_max = np.max(mjds)
 
-    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     ax1.set_ylabel("Magnitude [AB]")
     ax1.set_xlabel("MJD")
@@ -456,7 +457,7 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
 
 def plot_temperature(fitparams, **kwargs):
     """ """
-    plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     ax1.set_ylabel("Temperature [K]")
     ax1.set_xlabel("MJD")
@@ -491,7 +492,7 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
     frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
     spectrum_mags = []
 
-    plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=300)
+    plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     plt.xscale("log")
 

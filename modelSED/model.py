@@ -12,9 +12,6 @@ from astropy.utils.console import ProgressBar
 from fit import FitSpectrum
 import utilities, plot, sncosmo_spectral_v13
 
-FIG_WIDTH = 8
-FONTSIZE = 10
-
 
 class SED:
     """
@@ -275,7 +272,7 @@ if __name__ == "__main__":
 
     nbins = 60
 
-    fittype = "blackbody"
+    fittype = "powerlaw"
     fitglobal = False
     fitlocal = False
 
