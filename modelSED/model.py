@@ -104,7 +104,7 @@ class SED:
 
         lc = lc[lc.telescope_band.isin(bands_to_fit)]
         lc.reset_index(inplace=True)
-        lc.drop(columns=["index"], inplace=True)
+        lc = lc.drop(columns=["index"])
 
         temp_df = pd.DataFrame()
 
@@ -276,8 +276,8 @@ if __name__ == "__main__":
     nbins = 60
 
     fittype = "powerlaw"
-    fitglobal = True
-    fitlocal = True
+    fitglobal = False
+    fitlocal = False
 
     path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
 

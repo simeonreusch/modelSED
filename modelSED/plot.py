@@ -390,12 +390,6 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                 spectrum = sncosmo_spectral_v13.Spectrum(
                     wave=wavelengths, flux=flux_nu, unit=utilities.FNU
                 )
-                spectrum_upper = sncosmo_spectral_v13.Spectrum(
-                    wave=wavelengths, flux=(flux_nu + flux_nu_err), unit=utilities.FNU
-                )
-                spectrum_lower = sncosmo_spectral_v13.Spectrum(
-                    wave=wavelengths, flux=(flux_nu - flux_nu_err), unit=utilities.FNU
-                )
 
             if fittype == "blackbody":
                 spectrum = utilities.blackbody_spectrum(
@@ -408,17 +402,15 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
 
             for band in filter_wl.keys():
                 if band in bands_to_plot:
-                    mag = utilities.magnitude_in_band(band, spectrum)
-                    # mag_upper = utilities.magnitude_in_band(band, spectrum_upper)
-                    # mag_lower = utilities.magnitude_in_band(band, spectrum_lower)
+
+                    wl = filter_wl[band]
+                    for index, _wl in enumerate(spectrum.wave):
+                        if _wl > wl:
+                            mag = utilities.flux_to_abmag(spectrum.flux[index])
+                            break
+                    # mag = utilities.magnitude_in_band(band, spectrum)
                     df_model = df_model.append(
-                        {
-                            "mjd": fitparams[entry]["mjd"],
-                            "band": band,
-                            "mag": mag,
-                            # "mag_upper": mag_upper,
-                            # "mag_lower": mag_lower,
-                        },
+                        {"mjd": fitparams[entry]["mjd"], "band": band, "mag": mag,},
                         ignore_index=True,
                     )
 
