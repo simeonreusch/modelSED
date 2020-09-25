@@ -11,10 +11,12 @@ Otherwise, you can clone the repository: ```git clone https://github.com/simeonr
 ```python
 from modelSED.sed import SED
 
-# Define the path to the lightcurve you want to model. An example lightcurve is located at https://github.com/simeonreusch/modelSED/blob/master/examples/lightcurve.csv
-path_to_lightcurve = "example.csv"
+""" Define the path to the lightcurve you want to model. An example lightcurve is located at:
+https://github.com/simeonreusch/modelSED/blob/master/examples/lightcurve.csv
+"""
 
 # Now we need to define some parameters
+path_to_lightcurve = "example.csv"
 
 # Does the lightcurve have a redshift? Used for luminosity estimates
 redshift = 0.266
