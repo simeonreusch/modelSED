@@ -90,7 +90,7 @@ if __name__ == "__main__":
         download_url=DOWNLOAD_URL,
         install_requires=install_requires,
         packages=packages,
-        scripts=["modelSED/modelsed"],
+        #        scripts=["modelSED/modelsed"],
         # include_package_data=True,
         # package_data={'pysedm': ['data/*.*']},
         # package_data={'instrument_data': ['instrument_data/*']},
