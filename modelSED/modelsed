@@ -3,7 +3,7 @@
 # License: BSD-3-Clause
 
 import logging, os, argparse, json
-from sed import SED
+from modelSED.sed import SED
 
 parser = argparse.ArgumentParser(
     description="Used to obtain forced photometry for selection of SNe in parallel"
