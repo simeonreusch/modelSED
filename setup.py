@@ -7,8 +7,8 @@ MAINTAINER = "Simeon Reusch"
 MAINTAINER_EMAIL = "simeon.reusch@desy.de"
 URL = "https://github.com/simeonreusch/modelSED/"
 LICENSE = "BSD (3-clause)"
-DOWNLOAD_URL = "https://github.com/simeonreusch/modelSED/archive/v0.1-alpha.tar.gz"
-VERSION = "0.1-alpha"
+DOWNLOAD_URL = "https://github.com/simeonreusch/modelSED/archive/v0.2-alpha.tar.gz"
+VERSION = "0.2-alpha"
 
 try:
     from setuptools import setup, find_packages

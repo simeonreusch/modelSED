@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# Author: Simeon Reusch (simeon.reusch@desy.de)
+# License: BSD-3-Clause
+
+import logging, os, argparse, json
+from sed import SED
+
+parser = argparse.ArgumentParser(
+    description="Used to obtain forced photometry for selection of SNe in parallel"
+)
+
+redshift = 0.2666
+
+bands = [
+    "P48+ZTF_g",
+    "P48+ZTF_r",
+    "P48+ZTF_i",
+    "Swift+UVM2",
+]
+
+nbins = 60
+
+fittype = "powerlaw"
+fitglobal = False
+fitlocal = False
+
+path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
+
+sed = SED(
+    redshift=redshift,
+    fittype=fittype,
+    nbins=nbins,
+    path_to_lightcurve=path_to_lightcurve,
+)
+if fitglobal:
+    sed.fit_global(bands=bands, plot=False)
+sed.load_global_fitparams()
+
+if fitlocal:
+    if fittype == "powerlaw":
+        sed.fit_bins(
+            alpha=sed.fitparams_global["alpha"],
+            alpha_err=sed.fitparams_global["alpha_err"],
+            bands=bands,
+            min_bands_per_bin=2,
+            # neccessary_bands=["Swift+UVM2"],
+            verbose=False,
+        )
+    else:
+        sed.fit_bins(
+            extinction_av=sed.fitparams_global["extinction_av"],
+            extinction_av_err=sed.fitparams_global["extinction_av_err"],
+            extinction_rv=sed.fitparams_global["extinction_rv"],
+            extinction_rv_err=sed.fitparams_global["extinction_rv_err"],
+            bands=bands,
+            min_bands_per_bin=2,
+            neccessary_bands=["Swift+UVM2"],
+            verbose=False,
+        )
+sed.load_fitparams()
+sed.plot_lightcurve(bands=bands)
+# sed.plot_lightcurve(bands=with_p200)
+# if fittype == "blackbody":
+#     sed.plot_temperature()
+sed.plot_luminosity()
