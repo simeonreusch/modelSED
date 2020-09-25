@@ -74,7 +74,7 @@ if __name__ == "__main__":
         print(packages)
     else:
         # This should be updated if new submodules are added
-        packages = ["ztflc"]
+        packages = ["modelSED"]
 
     setup(
         name=DISTNAME,
@@ -90,6 +90,7 @@ if __name__ == "__main__":
         download_url=DOWNLOAD_URL,
         install_requires=install_requires,
         packages=packages,
+        scripts=["modelSED/model"],
         # include_package_data=True,
         # package_data={'pysedm': ['data/*.*']},
         # package_data={'instrument_data': ['instrument_data/*']},

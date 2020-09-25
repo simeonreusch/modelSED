@@ -10,7 +10,7 @@ import astropy.units as u
 from astropy import constants as const
 from astropy.utils.console import ProgressBar
 from fit import FitSpectrum
-import utilities, plot, sncosmo_spectral_v13
+from . import utilities, plot, sncosmo_spectral_v13
 
 
 class SED:
@@ -273,8 +273,8 @@ if __name__ == "__main__":
     nbins = 60
 
     fittype = "powerlaw"
-    fitglobal = False
-    fitlocal = False
+    fitglobal = True
+    fitlocal = True
 
     path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
 
