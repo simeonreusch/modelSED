@@ -19,9 +19,6 @@ path_to_lightcurve = "example.csv"
 # Does the lightcurve have a redshift? Used for luminosity estimates
 redshift = 0.266
 
-# Which type of fit should be performed?
-fittype = "powerlaw" # Can be powerlaw or blackbody
-
 # How many time bins do we want?
 nbins = 60
 
@@ -33,33 +30,28 @@ bands = [
     "Swift+UVM2",
 ]
 
+# Initialize SED class
 sed = SED(
     redshift=redshift,
     fittype=fittype,
     nbins=nbins,
     path_to_lightcurve=path_to_lightcurve,
 )
+
+# Perform the global fit
 sed.fit_global(bands=bands, plot=False)
 sed.load_global_fitparams()
-if fittype == "powerlaw":
-    sed.fit_bins(
-        alpha=sed.fitparams_global["alpha"],
-        alpha_err=sed.fitparams_global["alpha_err"],
-        bands=bands,
-        min_bands_per_bin=2,
-        verbose=False,
-    )
-else:
-    sed.fit_bins(
-        extinction_av=sed.fitparams_global["extinction_av"],
-        extinction_av_err=sed.fitparams_global["extinction_av_err"],
-        extinction_rv=sed.fitparams_global["extinction_rv"],
-        extinction_rv_err=sed.fitparams_global["extinction_rv_err"],
-        bands=bands,
-        min_bands_per_bin=2,
-        neccessary_bands=["Swift+UVM2"],
-        verbose=False,
-    )
+
+# Perform the fit of each time bin
+sed.fit_bins(
+    alpha=sed.fitparams_global["alpha"],
+    alpha_err=sed.fitparams_global["alpha_err"],
+    bands=bands,
+    min_bands_per_bin=2,
+    verbose=False,
+)
+
+# Plot the stuff
 sed.load_fitparams()
 sed.plot_lightcurve(bands=bands)
 sed.plot_luminosity()
