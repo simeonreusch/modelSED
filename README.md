@@ -11,7 +11,7 @@ Otherwise, you can clone the repository: ```git clone https://github.com/simeonr
 ```python
 from modelSED.sed import SED
 
-# Define the path to the lightcurve you want to model. An example lightcurve is located at https://github.com/simeonreusch/modelSED/blob/master/modelSED/data/lightcurves/example.csv
+# Define the path to the lightcurve you want to model. An example lightcurve is located at https://github.com/simeonreusch/modelSED/blob/master/examples/lightcurve.csv
 path_to_lightcurve = "example.csv"
 
 # Now we need to define some parameters
@@ -56,3 +56,4 @@ sed.load_fitparams()
 sed.plot_lightcurve(bands=bands)
 sed.plot_luminosity()
 ```
+![](examples/figures/lightcurve_powerlaw.png)
