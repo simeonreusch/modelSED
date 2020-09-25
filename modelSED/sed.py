@@ -152,10 +152,12 @@ class SED:
             if min_bands_per_bin is None:
                 min_bands_per_bin = len(kwargs["bands"])
             print(f"Bands which are fitted: {kwargs['bands']}")
+            bands = kwargs["bands"]
         else:
             if min_bands_per_bin is None:
                 min_bands_per_bin = 2
             print(f"Fitting all bands")
+            bands = binned_lc_df.telescope_band.unique()
 
         if not neccessary_bands:
             neccessary_bands = []

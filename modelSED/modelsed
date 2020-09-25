@@ -9,6 +9,12 @@ parser = argparse.ArgumentParser(
     description="Used to obtain forced photometry for selection of SNe in parallel"
 )
 
+parser.add_argument(
+    "lightcurve_file",
+    type=str,
+    help="Provide the path to a lightcurve in csv format (see documentation)",
+)
+
 redshift = 0.2666
 
 bands = [
@@ -21,10 +27,14 @@ bands = [
 nbins = 60
 
 fittype = "powerlaw"
-fitglobal = False
-fitlocal = False
+fitglobal = True
+fitlocal = True
 
-path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
+
+commandline_args = parser.parse_args()
+path_to_lightcurve = commandline_args.lightcurve_file
+
+# path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
 
 sed = SED(
     redshift=redshift,
