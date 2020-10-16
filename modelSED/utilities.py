@@ -36,6 +36,19 @@ def abmag_to_flux(abmag, magzp=48.585):
     return flux
 
 
+def flux_density_to_flux(wl, flux_density, flux_density_err=None):
+    """ Convert flux density in erg/s cm^2 for given wavelength
+        in Angstrom
+    """
+    nu = const.c.to("Angstrom/s") / (filter_wl[instrband] * u.AA)
+    flux = flux_density * nu
+    if flux_density is not None:
+        flux_err = flux_density_err * nu
+        return flux, flux_err
+    else:
+        return flux
+
+
 def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
     abmag = np.asarray(abmag, dtype=float)
     abmag_err = np.asarray(abmag_err, dtype=float)
