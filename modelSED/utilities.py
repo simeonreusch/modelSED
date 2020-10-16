@@ -40,7 +40,7 @@ def flux_density_to_flux(wl, flux_density, flux_density_err=None):
     """ Convert flux density in erg/s cm^2 for given wavelength
         in Angstrom
     """
-    nu = const.c.to("Angstrom/s") / (filter_wl[instrband] * u.AA)
+    nu = const.c.to("Angstrom/s") / (wl * u.AA)
     flux = flux_density * nu
     if flux_density is not None:
         flux_err = flux_density_err * nu
