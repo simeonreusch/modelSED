@@ -61,6 +61,10 @@ def check_dependencies():
         import seaborn
     except ImportError:
         install_requires.append("seaborn")
+    try:
+        import pysynphot
+    except ImportError:
+        install_requires.append("pysynphot")
 
     return install_requires
 
