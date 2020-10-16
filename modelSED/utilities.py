@@ -42,7 +42,7 @@ def flux_density_to_flux(wl, flux_density, flux_density_err=None):
     """
     nu = const.c.to("Angstrom/s") / (wl * u.AA)
     flux = flux_density * nu
-    if flux_density is not None:
+    if flux_density_err is not None:
         flux_err = flux_density_err * nu
         return flux, flux_err
     else:
