@@ -284,14 +284,8 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     ax1.set_xlabel("MJD")
 
     if fittype == "blackbody":
-        ax1.set_ylabel("Blackbody luminosity [erg/s]")
-        plot1 = ax1.plot(
-            mjds,
-            bolo_lumi,
-            label="Blackbody luminosity",
-            color="blue",
-            fontsize=FONTSIZE,
-        )
+        ax1.set_ylabel("Blackbody luminosity [erg/s]", fontsize=FONTSIZE)
+        plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue",)
         ax2 = ax1.twinx()
         plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
         ax2.set_ylabel("Blackbody radius [cm]", fontsize=FONTSIZE)
