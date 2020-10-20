@@ -288,7 +288,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
         ax2 = ax1.twinx()
         plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
-        ax2.set_ylabel("Blackbody radius [m]")
+        ax2.set_ylabel("Blackbody radius [cm]")
         plots = plot1 + plot2
         labels = [p.get_label() for p in plots]
         # ax1.legend(plots, labels, loc=0)

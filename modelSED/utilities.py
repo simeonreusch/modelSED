@@ -146,6 +146,7 @@ def calculate_bolometric_luminosity(
 
     a = scale
     radius = np.sqrt(d ** 2 / a)
+    radius_cm = radius / 100
     # bolometric_flux_unscaled = row.bolometric_flux_unscaled * u.erg / (u.cm**2 * u.s)
     # radius_cm = radius/100
     # luminosity = 4 * np.pi * bolometric_flux_unscaled * radius_cm**2
@@ -154,7 +155,7 @@ def calculate_bolometric_luminosity(
     )
     luminosity = luminosity_watt.to(u.erg / u.s)
 
-    return luminosity, radius
+    return luminosity, radius_cm
 
 
 def powerlaw_spectrum(

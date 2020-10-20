@@ -274,9 +274,9 @@ if __name__ == "__main__":
 
     nbins = 60
 
-    fittype = "powerlaw"
-    fitglobal = True
-    fitlocal = True
+    fittype = "blackbody"
+    fitglobal = False
+    fitlocal = False
 
     path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
 
@@ -313,7 +313,7 @@ if __name__ == "__main__":
             )
     sed.load_fitparams()
     sed.plot_lightcurve(bands=bands)
-    # sed.plot_lightcurve(bands=with_p200)
-    # if fittype == "blackbody":
-    #     sed.plot_temperature()
+    sed.plot_lightcurve(bands=with_p200)
+    if fittype == "blackbody":
+        sed.plot_temperature()
     sed.plot_luminosity()
