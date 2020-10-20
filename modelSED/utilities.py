@@ -146,7 +146,7 @@ def calculate_bolometric_luminosity(
 
     a = scale
     radius = np.sqrt(d ** 2 / a)
-    radius_cm = radius / 100
+    radius_cm = radius * 100
     # bolometric_flux_unscaled = row.bolometric_flux_unscaled * u.erg / (u.cm**2 * u.s)
     # radius_cm = radius/100
     # luminosity = 4 * np.pi * bolometric_flux_unscaled * radius_cm**2
