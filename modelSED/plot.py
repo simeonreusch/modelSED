@@ -11,7 +11,7 @@ from astropy import constants as const
 from scipy.interpolate import UnivariateSpline
 from . import utilities, sncosmo_spectral_v13
 
-FIG_WIDTH = 6
+FIG_WIDTH = 5
 FONTSIZE = 10
 ANNOTATION_FONTSIZE = 8
 DPI = 400
@@ -285,10 +285,16 @@ def plot_luminosity(fitparams, fittype, **kwargs):
 
     if fittype == "blackbody":
         ax1.set_ylabel("Blackbody luminosity [erg/s]")
-        plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
+        plot1 = ax1.plot(
+            mjds,
+            bolo_lumi,
+            label="Blackbody luminosity",
+            color="blue",
+            fontsize=FONTSIZE,
+        )
         ax2 = ax1.twinx()
         plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
-        ax2.set_ylabel("Blackbody radius [cm]")
+        ax2.set_ylabel("Blackbody radius [cm]", fontsize=FONTSIZE)
         plots = plot1 + plot2
         labels = [p.get_label() for p in plots]
         # ax1.legend(plots, labels, loc=0)
@@ -299,7 +305,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         # ax2.spines['right'].set_color('red')
         # ax1.spines['left'].set_color('blue')
     else:
-        ax1.set_ylabel("Intrinsic luminosity [erg/s]")
+        ax1.set_ylabel("Intrinsic luminosity [erg/s]", fontsize=FONTSIZE)
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
         ax1.legend(fontsize=FONTSIZE)
