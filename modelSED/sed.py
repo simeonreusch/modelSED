@@ -261,7 +261,8 @@ class SED:
         lc = pd.read_csv(self.path_to_lightcurve)
         lc.drop(columns=["Unnamed: 0"], inplace=True)
 
-        lc.insert(len(lc.columns), "telescope_band", lc.telescope + "+" + lc.band)
+        if "telescope_band" not in lc.columns:
+            lc.insert(len(lc.columns), "telescope_band", lc.telescope + "+" + lc.band)
 
         self.lc = lc
 
