@@ -217,7 +217,12 @@ class SED:
         else:
             bands = None
 
-        result = fit.fit_global_parameters(min_datapoints=len(bands),)
+        if "min_datapoints" in kwargs:
+            min_datapoints = kwargs["min_datapoints"]
+        else:
+            min_datapoints = len(bands)
+
+        result = fit.fit_global_parameters(min_datapoints=min_datapoints)
 
         with open(
             os.path.join(self.fit_dir, f"{self.fittype}_global.json"), "w"
@@ -274,9 +279,9 @@ if __name__ == "__main__":
 
     nbins = 60
 
-    fittype = "blackbody"
-    fitglobal = False
-    fitlocal = False
+    fittype = "powerlaw"
+    fitglobal = True
+    fitlocal = True
 
     path_to_lightcurve = os.path.join("data", "lightcurves", "full_lightcurve.csv")
 
@@ -313,7 +318,7 @@ if __name__ == "__main__":
             )
     sed.load_fitparams()
     sed.plot_lightcurve(bands=bands)
-    sed.plot_lightcurve(bands=with_p200)
-    if fittype == "blackbody":
-        sed.plot_temperature()
+    # sed.plot_lightcurve(bands=with_p200)
+    # if fittype == "blackbody":
+    #     sed.plot_temperature()
     sed.plot_luminosity()
