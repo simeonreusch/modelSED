@@ -17,6 +17,9 @@ FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
+print(CURRENT_FILE_DIR)
+print(INSTRUMENT_DATA_DIR)
+print("###############################################")
 
 
 def flux_to_abmag(flux_nu, flux_nu_zp=48.585):
@@ -97,14 +100,16 @@ def magnitude_in_band(band: str, spectrum):
 
     for bandname in additional_bands.keys():
         fname = additional_bands[bandname]
-        b = np.loadtxt(fname)
+        b = np.loadtxt(os.path.join(CURRENT_FILE_DIR, fname))
         if "Swift" in fname:
             bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1] / 50, name=bandname)
         else:
             bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1], name=bandname)
         sncosmo.registry.register(bandpass, force=True)
 
-    bp = sncosmo_spectral_v13.read_bandpass(bandpassfiles[band])
+    bp = sncosmo_spectral_v13.read_bandpass(
+        os.path.join(CURRENT_FILE_DIR, bandpassfiles[band])
+    )
     ab = sncosmo.get_magsystem("ab")
     zp_flux = ab.zpbandflux(zpbandfluxnames[band])
     bandflux = spectrum.bandflux(bp) / zp_flux
@@ -146,7 +151,6 @@ def calculate_bolometric_luminosity(
 
     a = scale
     radius = np.sqrt(d ** 2 / a)
-    radius_cm = radius * 100
     # bolometric_flux_unscaled = row.bolometric_flux_unscaled * u.erg / (u.cm**2 * u.s)
     # radius_cm = radius/100
     # luminosity = 4 * np.pi * bolometric_flux_unscaled * radius_cm**2
@@ -155,7 +159,7 @@ def calculate_bolometric_luminosity(
     )
     luminosity = luminosity_watt.to(u.erg / u.s)
 
-    return luminosity, radius_cm
+    return luminosity, radius
 
 
 def powerlaw_spectrum(
