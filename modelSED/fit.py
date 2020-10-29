@@ -82,6 +82,7 @@ class FitSpectrum:
                 _df = reduced_df.query(
                     f"telescope_band == '{telescope_band}' and mean_obsmjd == '{mjd}'"
                 )
+                print(_df)
                 flux = _df.mean_flux.values[0]
                 flux_err = _df.mean_flux_err.values[0]
                 fluxes.append(flux)
@@ -108,18 +109,21 @@ class FitSpectrum:
 
             fcn_kws = {"fittype": self.fittype}
 
-        else:
+        if self.fittype == "blackbody":
             for iy, y in enumerate(data):
-                fit_params.add(f"temperature_{iy+1}", value=30000, min=1000, max=150000)
-                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e20, max=1e25)
-                fit_params.add(f"extinction_av_{iy+1}", value=1.7, min=0, max=3.5)
-                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=0, max=4)
+                fit_params.add(f"temperature_{iy+1}", value=10000, min=100, max=150000)
+                fit_params.add(f"scale_{iy+1}", value=1e23, min=1e18, max=1e27)
+                fit_params.add(f"extinction_av_{iy+1}", value=0, min=0, max=4)
+                fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=2.5, max=3.5)
 
             for i in range(2, len(data) + 1, 1):
                 fit_params[f"extinction_av_{i}"].expr = "extinction_av_1"
                 fit_params[f"extinction_rv_{i}"].expr = "extinction_rv_1"
 
             fcn_kws = {"fittype": self.fittype, "redshift": self.redshift}
+
+        else:
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
         minimizer = Minimizer(
             self._global_minimizer,
@@ -128,11 +132,12 @@ class FitSpectrum:
             fcn_kws=fcn_kws,
         )
 
-        out = minimizer.minimize()
+        out = minimizer.minimize(method="basinhopping")
 
         if "verbose" in kwargs:
             if kwargs["verbose"]:
                 print(report_fit(out.params))
+                print(f"reduced chisquare: {out.redchi}")
 
         parameters = out.params.valuesdict()
 
@@ -149,13 +154,17 @@ class FitSpectrum:
                         scale=parameters[f"scale_{i+1}"],
                         redshift=None,
                     )
-                else:
+                if self.fittype == "blackbody":
                     spectrum = utilities.blackbody_spectrum(
                         temperature=parameters[f"temperature_{i+1}"],
                         scale=parameters[f"scale_{i+1}"],
                         redshift=self.redshift,
                         extinction_av=parameters[f"extinction_av_{i+1}"],
                         extinction_rv=parameters[f"extinction_rv_{i+1}"],
+                    )
+                else:
+                    print(
+                        "please provide a fittype (at the moment: powerlaw or blackbody)"
                     )
 
                 plot.plot_sed_from_flux(
@@ -173,14 +182,20 @@ class FitSpectrum:
             return {
                 "alpha": out.params["alpha_1"].value,
                 "alpha_err": out.params["alpha_1"].stderr,
+                "red_chisq": out.redchi,
             }
-        else:
+
+        if self.fittype == "blackbody":
             return {
                 "extinction_av": out.params["extinction_av_1"].value,
                 "extinction_av_err": out.params["extinction_av_1"].stderr,
                 "extinction_rv": out.params["extinction_rv_1"].value,
                 "extinction_rv_err": out.params["extinction_rv_1"].stderr,
+                "red_chisq": out.redchi,
             }
+
+        else:
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
     def fit_bin(self, **kwargs):
         """ """
@@ -200,7 +215,6 @@ class FitSpectrum:
                 alpha_err = kwargs["alpha_err"]
             else:
                 alpha_err = None
-
         else:
             if "extinction_av" in kwargs.keys():
                 extinction_av = kwargs["extinction_av"]
@@ -209,7 +223,9 @@ class FitSpectrum:
                 extinction_rv_err = kwargs["extinction_rv_err"]
             else:
                 extinction_av = None
+                extinction_av_err = None
                 extinction_rv = None
+                extinction_rv_err = None
 
         df = self.binned_lc_df
         mean_flux = utilities.abmag_to_flux(df.mean_mag.values)
@@ -228,9 +244,11 @@ class FitSpectrum:
             params.add("scale", value=1e-14, min=1e-20, max=1e-8)
             if alpha is None:
                 params.add("alpha", value=-0.9, min=-1.2, max=-0.1)
+        if self.fittype == "blackbody":
+            params.add("temp", value=10000, min=100, max=150000)
+            params.add("scale", value=1e23, min=1e18, max=1e27)
         else:
-            params.add("temp", value=30000, min=1000, max=150000)
-            params.add("scale", value=1e23, min=1e20, max=1e25)
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
         wl_observed = np.asarray(df.wavelength.values)
         data = np.asarray(df.mean_mag.values)
@@ -243,15 +261,22 @@ class FitSpectrum:
                 fcn_kws = {}
             minimizer_fcn = self._powerlaw_minimizer
 
-        else:
-            fcn_kws = {"extinction_av": extinction_av, "extinction_rv": extinction_rv}
+        if self.fittype == "blackbody":
+            fcn_kws = {
+                "extinction_av": extinction_av,
+                "extinction_rv": extinction_rv,
+                "redshift": self.redshift,
+            }
             minimizer_fcn = self._blackbody_minimizer
+
+        else:
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
         minimizer = Minimizer(
             minimizer_fcn, params, fcn_args=(wl_observed, [data]), fcn_kws=fcn_kws,
         )
 
-        out = minimizer.minimize()
+        out = minimizer.minimize(method="basinhopping")
 
         if "verbose" in kwargs:
             if kwargs["verbose"]:
@@ -270,7 +295,7 @@ class FitSpectrum:
                     alpha=parameters["alpha"], scale=parameters["scale"],
                 )
 
-        else:
+        if self.fittype == "blackbody":
             spectrum, bolometric_flux_unscaled = utilities.blackbody_spectrum(
                 temperature=parameters["temp"],
                 scale=parameters["scale"],
@@ -279,6 +304,9 @@ class FitSpectrum:
                 redshift=self.redshift,
                 get_bolometric_flux=True,
             )
+
+        else:
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
         df, red_chisq = self._evaluate_spectrum(spectrum, df)
 
@@ -352,7 +380,7 @@ class FitSpectrum:
                 returndict.update({"alpha_err": alpha_err})
             return returndict
 
-        else:
+        if self.fittype == "blackbody":
             return {
                 "temperature": parameters["temp"],
                 "temperature_err": out.params["temp"].stderr,
@@ -370,6 +398,9 @@ class FitSpectrum:
                 "bolometric_luminosity": bolo_lumi.value,
                 "radius": radius.value,
             }
+
+        else:
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
     @staticmethod
     def _evaluate_spectrum(spectrum, df):
@@ -430,7 +461,11 @@ class FitSpectrum:
             extinction_av = kwargs["extinction_av"]
             extinction_rv = kwargs["extinction_rv"]
 
-        redshift = 0.2666
+        if "redshift" in kwargs.keys():
+            redshift = kwargs["redshift"]
+        else:
+            redshift = None
+
         spectrum = utilities.blackbody_spectrum(
             temperature=temp,
             scale=scale,
@@ -452,8 +487,12 @@ class FitSpectrum:
         #     ab_model = utilities.magnitude_in_band(wl_filter[i], spectrum)
         #     ab_model_list.append(ab_model)
 
+        residual = np.asarray(ab_model_list) - np.asarray(data)
+        residual = np.nan_to_num(residual)
+        print(data)
+        print(residual)
         if data:
-            return np.asarray(ab_model_list) - np.asarray(data)
+            return residual
         else:
             return ab_model_list
 
@@ -548,7 +587,6 @@ class FitSpectrum:
 
                 fluxes = []
                 for wl in x:
-                    # ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
                     for index, _wl in enumerate(spectrum.wave):
                         if _wl > wl:
                             ab_model = utilities.flux_to_abmag(spectrum.flux[index])
@@ -557,18 +595,18 @@ class FitSpectrum:
                             break
                 # for wl in x:
                 #     ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+                #     flux = utilities.abmag_to_flux(ab_model)
+                #     fluxes.append(flux)
 
                 if data_err is None:
                     residual[i, :] = data[i, :] - fluxes
                 else:
                     residual[i, :] = (data[i, :] - fluxes) / data_err[i, :]
 
-        else:  # assume blackbody
+        if fittype == "blackbody":  # assume blackbody
             for i in range(ndata):
                 temperature = params[f"temperature_{i+1}"]
                 scale = params[f"scale_{i+1}"]
-                # extinction_av = 1.7
-                # extinction_rv = 3.1
                 extinction_av = params[f"extinction_av_{i+1}"]
                 extinction_rv = params[f"extinction_rv_{i+1}"]
 
@@ -590,55 +628,21 @@ class FitSpectrum:
                             fluxes.append(flux)
                             break
                     # ab_model = utilities.magnitude_in_band(wl_filter[wl], spectrum)
+                    # flux = utilities.abmag_to_flux(ab_model)
+                    # fluxes.append(flux)
+
                 if data_err is None:
                     residual[i, :] = data[i, :] - fluxes
                 else:
                     residual[i, :] = (data[i, :] - fluxes) / data_err[i, :]
 
-        flattened_residual = residual.flatten()
-
-        print(f"mean residual = {np.mean(flattened_residual)}")
-        return flattened_residual
-
-
-def powerlaw_minimizer(params, x, data=None, **kwargs):
-    """ """
-    filter_wl = utilities.load_info_json("filter_wl")
-    wl_filter = {v: k for k, v in filter_wl.items()}
-
-    if "alpha" in kwargs:
-        alpha = kwargs["alpha"]
-    else:
-        alpha = params["alpha"]
-
-    if "scale" in params.keys():
-        scale = params["scale"]
-    else:
-        scale = None
-
-    if "redshift" in params.keys():
-        redshift = params["redshift"]
-    else:
-        redshift = None
-
-    spectrum = utilities.powerlaw_spectrum(alpha=alpha, scale=scale, redshift=redshift)
-
-    ab_model_list = []
-    flux_list = []
-
-    for i in x:
-        ab_model = utilities.magnitude_in_band(wl_filter[i], spectrum)
-        flux = utilities.abmag_to_flux(ab_model)
-        ab_model_list.append(ab_model)
-        flux_list.append(flux)
-
-    if "flux" in kwargs.keys():
-        if data:
-            return np.asarray(flux_list) - np.asarray(data)
         else:
-            return flux_list
+            print("please provide a fittype (at the moment: powerlaw or blackbody)")
 
-    if data:
-        return np.asarray(ab_model_list) - np.asarray(data)
-    else:
-        return ab_model_list
+        print(data)
+        print(residual)
+        flattened_residual = residual.flatten()
+        mean_flattened_residual = np.abs(np.mean(flattened_residual))
+
+        print(f"mean residual = {mean_flattened_residual}")
+        return flattened_residual

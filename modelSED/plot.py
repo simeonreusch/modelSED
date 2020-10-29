@@ -11,7 +11,7 @@ from astropy import constants as const
 from scipy.interpolate import UnivariateSpline
 from . import utilities, sncosmo_spectral_v13
 
-FIG_WIDTH = 5
+FIG_WIDTH = 6
 FONTSIZE = 10
 ANNOTATION_FONTSIZE = 8
 DPI = 400
@@ -284,11 +284,11 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     ax1.set_xlabel("MJD")
 
     if fittype == "blackbody":
-        ax1.set_ylabel("Blackbody luminosity [erg/s]", fontsize=FONTSIZE)
-        plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue",)
+        ax1.set_ylabel("Blackbody luminosity [erg/s]")
+        plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
         ax2 = ax1.twinx()
         plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
-        ax2.set_ylabel("Blackbody radius [cm]", fontsize=FONTSIZE)
+        ax2.set_ylabel("Blackbody radius [m]")
         plots = plot1 + plot2
         labels = [p.get_label() for p in plots]
         # ax1.legend(plots, labels, loc=0)
@@ -299,7 +299,7 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         # ax2.spines['right'].set_color('red')
         # ax1.spines['left'].set_color('blue')
     else:
-        ax1.set_ylabel("Intrinsic luminosity [erg/s]", fontsize=FONTSIZE)
+        ax1.set_ylabel("Intrinsic luminosity [erg/s]")
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
         ax1.legend(fontsize=FONTSIZE)
@@ -397,17 +397,24 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
         for key in filter_wl.keys():
             if key in bands_to_plot:
                 df_model_band = df_model.query(f"band == '{key}'")
-                spline = UnivariateSpline(
-                    df_model_band.mjd.values, df_model_band.mag.values
-                )
+                if len(df_model_band) > 1:
+                    spline = UnivariateSpline(
+                        df_model_band.mjd.values, df_model_band.mag.values
+                    )
 
-                spline.set_smoothing_factor(0.001)
+                    spline.set_smoothing_factor(0.001)
 
-                ax1.plot(
-                    df_model_band.mjd.values,
-                    spline(df_model_band.mjd.values),
-                    color=cmap[key],
-                )
+                    ax1.plot(
+                        df_model_band.mjd.values,
+                        spline(df_model_band.mjd.values),
+                        color=cmap[key],
+                    )
+                else:
+                    ax1.scatter(
+                        df_model_band.mjd.values,
+                        df_model_band.mag.values,
+                        color=cmap[key],
+                    )
 
         if fittype == "powerlaw":
             alphas = set()
@@ -438,9 +445,25 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                 extinction_rv_errs.add(rv_err)
             title = "BB spectrum fit, "
             if len(extinction_avs) == 1:
-                title += f"ext. $A_V$ = {list(extinction_avs)[0]:.2f} $\pm$ {list(extinction_av_errs)[0]:.2f}"
+                extinction_av = list(extinction_avs)[0]
+                extinction_av_err = list(extinction_av_errs)[0]
+                if extinction_av_err is not None:
+                    title += f"ext. $A_V$ = {extinction_av:.2f} $\pm$ {extinction_av_err:.2f}"
+                elif extinction_av is not None:
+                    title += f"ext. $A_V$ = {extinction_av:.2f}"
+                else:
+                    title += f"ext. $A_V$ = None"
             if len(extinction_rvs) == 1:
-                title += f", $R_V$ = {list(extinction_rvs)[0]:.2f} $\pm$ {list(extinction_rv_errs)[0]:.2f}"
+                extinction_rv = list(extinction_rvs)[0]
+                extinction_rv_err = list(extinction_rv_errs)[0]
+                if extinction_rv_err is not None:
+                    title += (
+                        f", $R_V$ = {extinction_rv:.2f} $\pm$ {extinction_rv_err:.2f}"
+                    )
+                elif extinction_rv is not None:
+                    title += f", $R_V$ = {extinction_rv:.2f}"
+                else:
+                    title += f", $R_V$ = None"
 
             if len(title) > 0:
                 plt.title(title)
@@ -526,7 +549,7 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
         ax1.set_ylabel("Magnitude [AB]")
         ax1.set_xlabel(r"$\lambda$")
         ax1.invert_yaxis()
-        ax1.set_ylim([21, 17])
+        ax1.set_ylim([21, 16])
         ax1.plot(spectrum.wave, utilities.flux_to_abmag(spectrum._flux))
 
         for index, row in df.iterrows():
@@ -553,7 +576,7 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
             annotationstr += f"Spectral index $\\alpha$={alpha:.3f}\n"
         if "temperature" in annotations.keys():
             temperature = annotations["temperature"]
-            annotationstr += f"temperature={temperature:.2E}\n"
+            annotationstr += f"temperature={temperature:.2E} K\n"
         if "scale" in annotations.keys():
             scale = annotations["scale"]
             annotationstr += f"normalization $\\beta$={scale:.2E}\n"
@@ -565,16 +588,24 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
             annotationstr += f"bol. lum.={bolometric_luminosity:.2E}\n"
 
         if annotationstr.endswith("\n"):
-            annotationstr = annotationstr[:-2]
+            annotationstr = annotationstr[:-1]
 
-        if not plotmag:
+            # if not plotmag:
             annotation_location = (0.7e15, 1.5e-26)
-        else:
-            annotation_location = (2e4, 18.0)
+        # else:
+        annotation_location = (2e4, 18.0)
 
-        ax1.legend(
-            fontsize=FONTSIZE, fancybox=True, edgecolor="black", loc=0,
+        ax1.text(
+            0.65,
+            0.4,
+            annotationstr,
+            transform=ax1.transAxes,
+            fontsize=ANNOTATION_FONTSIZE,
         )
+
+    ax1.legend(
+        fontsize=FONTSIZE, fancybox=True, edgecolor="black", loc=0,
+    )
 
     plt.savefig(os.path.join(outpath, f"{mjd}.png"))
     plt.close()

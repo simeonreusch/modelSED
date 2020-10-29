@@ -17,9 +17,6 @@ FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
-print(CURRENT_FILE_DIR)
-print(INSTRUMENT_DATA_DIR)
-print("###############################################")
 
 
 def flux_to_abmag(flux_nu, flux_nu_zp=48.585):
@@ -81,11 +78,11 @@ def nu_to_lambda(nu):
 
 
 def flux_nu_to_lambda(fluxnu, wav):
-    return np.asarray(fluxnu) * 2.99792458e18 / np.asarray(wav) ** 2 * FLAM
+    return np.asarray(fluxnu) * 2.99792458e18 / (np.asarray(wav) ** 2) * FLAM
 
 
 def flux_lambda_to_nu(fluxlambda, wav):
-    return np.asarray(fluxlambda) * 3.33564095e-19 * np.asarray(wav) ** 2 * FNU
+    return np.asarray(fluxlambda) * 3.33564095e-19 * (np.asarray(wav) ** 2) * FNU
 
 
 def magnitude_in_band(band: str, spectrum):
@@ -299,7 +296,6 @@ def blackbody_spectrum(
     bb_nu = BlackBody(temperature=temperature * u.K, scale=scale_nu)
     flux_nu_unscaled = bb_nu(wavelengths) * u.sr
     flux_nu = flux_nu_unscaled / scale
-
     bolometric_flux_unscaled = bb_nu.bolometric_flux.value
 
     flux_lambda = flux_nu_to_lambda(flux_nu, wavelengths)
@@ -313,7 +309,6 @@ def blackbody_spectrum(
         spectrum_reddened = sncosmo_spectral_v13.Spectrum(
             wave=wavelengths, flux=flux_nu_reddened, unit=FNU
         )
-
     spectrum_unreddened = sncosmo_spectral_v13.Spectrum(
         wave=wavelengths, flux=flux_nu, unit=FNU
     )
