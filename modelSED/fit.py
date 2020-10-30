@@ -113,7 +113,7 @@ class FitSpectrum:
             for iy, y in enumerate(data):
                 fit_params.add(f"temperature_{iy+1}", value=10000, min=100, max=150000)
                 fit_params.add(f"scale_{iy+1}", value=1e23, min=1e18, max=1e27)
-                fit_params.add(f"extinction_av_{iy+1}", value=0, min=0, max=4)
+                fit_params.add(f"extinction_av_{iy+1}", value=0.001, min=0, max=2)
                 fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=2.5, max=3.5)
 
             for i in range(2, len(data) + 1, 1):
@@ -132,7 +132,7 @@ class FitSpectrum:
             fcn_kws=fcn_kws,
         )
 
-        out = minimizer.minimize(method="basinhopping")
+        out = minimizer.minimize()  # method="basinhopping")
 
         if "verbose" in kwargs:
             if kwargs["verbose"]:
@@ -276,7 +276,7 @@ class FitSpectrum:
             minimizer_fcn, params, fcn_args=(wl_observed, [data]), fcn_kws=fcn_kws,
         )
 
-        out = minimizer.minimize(method="basinhopping")
+        out = minimizer.minimize()  # method="basinhopping")
 
         if "verbose" in kwargs:
             if kwargs["verbose"]:
@@ -311,12 +311,20 @@ class FitSpectrum:
         df, red_chisq = self._evaluate_spectrum(spectrum, df)
 
         # Calculate bolometric luminosity
+
         if self.fittype == "blackbody":
-            bolo_lumi, radius = utilities.calculate_bolometric_luminosity(
+            (
+                bolo_lumi,
+                bolo_lumi_err,
+                radius,
+                radius_err,
+            ) = utilities.calculate_bolometric_luminosity(
                 bolometric_flux=bolometric_flux_unscaled,
-                temperature=parameters["temp"],
-                scale=parameters["scale"],
+                temperature=out.params["temp"],
+                scale=out.params["scale"],
                 redshift=self.redshift,
+                temperature_err=out.params["temp"].stderr,
+                scale_err=out.params["scale"].stderr,
             )
 
         if self.plot:
@@ -396,7 +404,9 @@ class FitSpectrum:
                 "luminosity_uv_optical": luminosity_uv_optical.value,
                 "luminosity_uv_nir": luminosity_uv_nir.value,
                 "bolometric_luminosity": bolo_lumi.value,
+                "bolometric_luminosity_err": bolo_lumi_err.value,
                 "radius": radius.value,
+                "radius_err": radius_err.value,
             }
 
         else:

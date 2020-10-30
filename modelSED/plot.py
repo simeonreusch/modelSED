@@ -141,20 +141,6 @@ def plot_sed_from_dict(
     frequencies = utilities.lambda_to_nu(spectrum.wave) * u.Hz
     spectrum_mags = []
 
-    # # ugly hack
-    # import json
-    # update = {"P200+J": {"observed": 17.51, "observed_err": 0.2, "wavelength": 12063.68, "frequency": utilities.lambda_to_nu(12063.68)}, "P200+H": {"observed": 16.45, "observed_err": 0.2, "wavelength": 15696.2, "frequency": utilities.lambda_to_nu(15696.2)},  "P200+Ks": {"observed": 15.33, "observed_err": 0.2, "wavelength": 21301.1, "frequency": utilities.lambda_to_nu(21301.1)}}
-    # mags.update(update)
-    # with open(os.path.join("fit", "blackbody.json")) as json_file:
-    #     outfile = json.load(json_file)
-    # bb_data = outfile["11"]
-    # bb_spectrum = utilities.blackbody_spectrum(temperature=bb_data["temperature"], scale=bb_data["scale"], redshift=0.2666, extinction_av=bb_data["extinction_av"], extinction_rv=bb_data["extinction_rv"])
-    # spectrum_mags_bb = []
-    # for index, wavelength in enumerate(bb_spectrum.wave):
-    #     spectrum_mag = utilities.flux_to_abmag(bb_spectrum.flux[index])
-    #     spectrum_mags_bb.append(spectrum_mag)
-    # # end of ugly hack
-
     plt.figure(figsize=(FIG_WIDTH, 0.75 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     plt.xscale("log")
@@ -237,24 +223,12 @@ def plot_sed_from_dict(
             annotationstr = annotationstr[:-2]
 
         if not plotmag:
-            # annotation_location = (1.2e15, 2.2e-27)
             annotation_location = (0.7e15, 1.5e-26)
         else:
             annotation_location = (2e4, 18.0)
 
-        # plt.annotate(
-        #     annotationstr,
-        #     annotation_location,
-        #     fontsize=FONTSIZE,
-        #     color="black",
-        #     bbox=bbox,
-        # )
         ax1.legend(
-            fontsize=FONTSIZE,
-            fancybox=True,
-            edgecolor="black",
-            # loc=(0.77,0.45),
-            loc=0,
+            fontsize=FONTSIZE, fancybox=True, edgecolor="black", loc=0,
         )
 
     plt.savefig(os.path.join(outpath, f"{mjd}.png"))
@@ -267,7 +241,9 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     lumi_without_nir = []
     lumi_with_nir = []
     bolo_lumi = []
+    bolo_lumi_err = []
     radius = []
+    radius_err = []
 
     for entry in fitparams:
         mjds.append(fitparams[entry]["mjd"])
@@ -277,7 +253,9 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     if fittype == "blackbody":
         for entry in fitparams:
             bolo_lumi.append(fitparams[entry]["bolometric_luminosity"])
+            bolo_lumi_err.append(fitparams[entry]["bolometric_luminosity_err"])
             radius.append(fitparams[entry]["radius"])
+            radius_err.append(fitparams[entry]["radius_err"])
 
     plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
@@ -286,18 +264,39 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     if fittype == "blackbody":
         ax1.set_ylabel("Blackbody luminosity [erg/s]")
         plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
+
+        if bolo_lumi_err[0] is not None:
+            bolo_lumi = np.asarray(bolo_lumi)
+            bolo_lumi_err = np.asarray(bolo_lumi_err)
+            ax1.fill_between(
+                mjds,
+                bolo_lumi - bolo_lumi_err,
+                bolo_lumi + bolo_lumi_err,
+                label="Blackbody luminosity",
+                color="blue",
+                alpha=0.1,
+            )
+
         ax2 = ax1.twinx()
         plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
-        ax2.set_ylabel("Blackbody radius [m]")
+
+        if radius_err[0] is not None:
+            radius = np.asarray(radius)
+            radius_err = np.asarray(radius_err)
+            ax2.fill_between(
+                mjds,
+                radius - radius_err,
+                radius + radius_err,
+                color="red",
+                label="Blackbody radius",
+                alpha=0.1,
+            )
+
+        ax2.set_ylabel("Blackbody radius [cm]")
         plots = plot1 + plot2
         labels = [p.get_label() for p in plots]
-        # ax1.legend(plots, labels, loc=0)
         ax2.yaxis.label.set_color("red")
         ax1.yaxis.label.set_color("blue")
-        # ax2.tick_params(axis='y', colors='red')
-        # ax1.tick_params(axis='y', colors='blue')
-        # ax2.spines['right'].set_color('red')
-        # ax1.spines['left'].set_color('blue')
     else:
         ax1.set_ylabel("Intrinsic luminosity [erg/s]")
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
@@ -485,17 +484,41 @@ def plot_temperature(fitparams, **kwargs):
     ax1.set_ylabel("Temperature [K]")
     ax1.set_xlabel("MJD")
     ax2 = ax1.twinx()
-    ax2.set_ylabel("Radius")
+    ax2.set_ylabel("Radius [cm]")
 
     mjds = []
     temps = []
+    temps_err = []
     radii = []
+    radii_err = []
+
     for entry in fitparams:
         mjds.append(fitparams[entry]["mjd"])
         temps.append(fitparams[entry]["temperature"])
+        temps_err.append(fitparams[entry]["temperature_err"])
         radii.append(fitparams[entry]["radius"])
+        radii_err.append(fitparams[entry]["radius_err"])
+
     ax1.plot(mjds, temps, color="blue")
     ax2.plot(mjds, radii, color="red")
+
+    if temps_err[0] is not None:
+        temps = np.asarray(temps)
+        temps_err = np.asarray(temps_err)
+        ax1.fill_between(
+            mjds, temps - temps_err, temps + temps_err, color="blue", alpha=0.1
+        )
+
+    if radii_err[0] is not None:
+        radii = np.asarray(radii)
+        radii_err = np.asarray(radii_err)
+        ax2.fill_between(
+            mjds, radii - radii_err, radii + radii_err, color="red", alpha=0.1
+        )
+
+    ax1.yaxis.label.set_color("blue")
+    ax2.yaxis.label.set_color("red")
+    plt.tight_layout()
     plt.savefig(f"plots/temperature_radius.png")
     plt.close()
 

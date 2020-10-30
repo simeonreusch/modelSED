@@ -141,22 +141,63 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
 
 
 def calculate_bolometric_luminosity(
-    bolometric_flux: float, temperature: float, scale: float, redshift: float
+    bolometric_flux: float,
+    temperature: float,
+    scale: float,
+    redshift: float,
+    temperature_err: float = None,
+    scale_err: float = None,
 ):
+    """ """
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.m)
 
-    a = scale
-    radius = np.sqrt(d ** 2 / a)
-    # bolometric_flux_unscaled = row.bolometric_flux_unscaled * u.erg / (u.cm**2 * u.s)
-    # radius_cm = radius/100
-    # luminosity = 4 * np.pi * bolometric_flux_unscaled * radius_cm**2
-    luminosity_watt = (
-        const.sigma_sb * (temperature * u.K) ** 4 * 4 * np.pi * (radius ** 2)
-    )
+    radius_m = np.sqrt(d ** 2 / scale)
+    radius_cm = np.sqrt(d ** 2 / scale) * (100 * u.cm) / u.m
+
+    temperature = temperature * u.K
+
+    luminosity_watt = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * (radius_m ** 2)
     luminosity = luminosity_watt.to(u.erg / u.s)
 
-    return luminosity, radius
+    # calculate errors
+    if scale_err is not None:
+        radius_m_err = np.sqrt((d ** 2 / (4 * scale ** 3)) * scale_err ** 2)
+        radius_cm_err = radius_m_err * (100 * u.cm) / u.m
+    else:
+        radius_m_err = None
+        radius_cm_err = None
+
+    if temperature_err is not None:
+        del_luminosity_T = (
+            16 * np.pi * const.sigma_sb * radius_m ** 2 * (temperature) ** 3
+        )
+        temperature_err = temperature_err * u.K
+
+    if radius_m_err is not None:
+        del_luminosity_r = (
+            8 * np.pi * const.sigma_sb * (temperature) ** 4 * radius_m_err
+        )
+
+    if temperature_err is not None and radius_m_err is not None:
+        luminosity_err_watt = np.sqrt(
+            (del_luminosity_T ** 2 * (temperature_err) ** 2)
+            + (del_luminosity_r ** 2 * radius_m_err ** 2)
+        )
+
+    elif temperature_err is not None and radius_m_err is None:
+        luminosity_err_watt = np.sqrt((del_luminosity_T ** 2 * (temperature_err) ** 2))
+    elif temperature_err is None and radius_m_err is not None:
+        luminosity_err_watt = np.sqrt((del_luminosity_r ** 2 * radius_m_err ** 2))
+    else:
+        luminosity_err_watt is None
+
+    if luminosity_err_watt is not None:
+        luminosity_err = luminosity_err_watt.to(u.erg / u.s)
+    else:
+        luminosity_err = None
+
+    return luminosity, luminosity_err, radius_cm, radius_cm_err
 
 
 def powerlaw_spectrum(
