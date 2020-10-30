@@ -113,7 +113,7 @@ class FitSpectrum:
             for iy, y in enumerate(data):
                 fit_params.add(f"temperature_{iy+1}", value=10000, min=100, max=150000)
                 fit_params.add(f"scale_{iy+1}", value=1e23, min=1e18, max=1e27)
-                fit_params.add(f"extinction_av_{iy+1}", value=0.001, min=0, max=2)
+                fit_params.add(f"extinction_av_{iy+1}", value=0.1, min=0, max=2)
                 fit_params.add(f"extinction_rv_{iy+1}", value=3.1, min=2.5, max=3.5)
 
             for i in range(2, len(data) + 1, 1):
