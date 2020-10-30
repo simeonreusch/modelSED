@@ -26,6 +26,7 @@ class SED:
         redshift: float,
         nbins: int = 30,
         fittype: str = "powerlaw",
+        fit_algorithm: str = "leastsq",
         path_to_lightcurve: str = None,
         **kwargs,
     ):
@@ -41,6 +42,7 @@ class SED:
         self.nbins = nbins
         self.redshift = redshift
         self.fittype = fittype
+        self.fit_algorithm = fit_algorithm
 
         self.data_dir = "data"
         self.plot_dir = "plots"
@@ -68,7 +70,7 @@ class SED:
 
     def fit_one_bin(self, binned_lc_df, **kwargs):
         """ """
-        fit = FitSpectrum(binned_lc_df, self.fittype, self.redshift)
+        fit = FitSpectrum(binned_lc_df, self.fittype, self.redshift, self.fit_algorithm)
         fitresult = fit.fit_bin(**kwargs)
 
         return fitresult
@@ -242,10 +244,14 @@ class SED:
                 fittype=self.fittype,
                 redshift=self.redshift,
                 plot=kwargs["plot"],
+                fit_algorithm=self.fit_algorithm,
             )
         else:
             fit = FitSpectrum(
-                binned_lc_df, fittype=self.fittype, redshift=self.redshift
+                binned_lc_df,
+                fittype=self.fittype,
+                redshift=self.redshift,
+                fit_algorithm=self.fit_algorithm,
             )
 
         if "bands" in kwargs:

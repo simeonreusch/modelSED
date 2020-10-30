@@ -23,6 +23,7 @@ class FitSpectrum:
         fittype: str = "powerlaw",
         redshift: float = 0,
         plot: bool = True,
+        fit_algorithm: str = "leastsq",
         **kwargs,
     ):
 
@@ -30,6 +31,7 @@ class FitSpectrum:
         self.binned_lc_df = binned_lc_df
         self.redshift = redshift
         self.plot = plot
+        self.fit_algorithm = fit_algorithm
         self.filter_wl = utilities.load_info_json("filter_wl")
         self.wavelengths = np.arange(1000, 60000, 10) * u.AA
         self.frequencies = const.c.value / (self.wavelengths.value * 1e-10) * u.Hz
@@ -132,7 +134,7 @@ class FitSpectrum:
             fcn_kws=fcn_kws,
         )
 
-        out = minimizer.minimize()  # method="basinhopping")
+        out = minimizer.minimize(method=self.fit_algorithm)
 
         if "verbose" in kwargs:
             if kwargs["verbose"]:
@@ -276,7 +278,7 @@ class FitSpectrum:
             minimizer_fcn, params, fcn_args=(wl_observed, [data]), fcn_kws=fcn_kws,
         )
 
-        out = minimizer.minimize()  # method="basinhopping")
+        out = minimizer.minimize(method=self.fit_algorithm)
 
         if "verbose" in kwargs:
             if kwargs["verbose"]:
