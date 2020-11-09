@@ -270,10 +270,16 @@ class SED:
             json.dump(result, outfile)
             return result
 
-    def plot_lightcurve(self, bands, **kwargs):
+    def plot_lightcurve(self, bands, nufnu=False, **kwargs):
         """" """
         plot.plot_lightcurve(
-            self.lc, bands, self.fitparams, self.fittype, self.redshift, **kwargs
+            self.lc,
+            bands,
+            self.fitparams,
+            self.fittype,
+            self.redshift,
+            nufnu=nufnu,
+            **kwargs,
         )
 
     def plot_luminosity(self, **kwargs):

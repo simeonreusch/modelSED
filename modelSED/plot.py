@@ -14,6 +14,7 @@ from . import utilities, sncosmo_spectral_v13
 FIG_WIDTH = 6
 FONTSIZE = 10
 ANNOTATION_FONTSIZE = 8
+TITLE_FONTSIZE = 12
 DPI = 400
 
 cmap = utilities.load_info_json("cmap")
@@ -308,7 +309,9 @@ def plot_luminosity(fitparams, fittype, **kwargs):
     plt.close()
 
 
-def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kwargs):
+def plot_lightcurve(
+    df, bands, fitparams=None, fittype=None, redshift=None, nufnu=False, **kwargs
+):
     """ """
     filter_wl = utilities.load_info_json("filter_wl")
     cmap = utilities.load_info_json("cmap")
@@ -319,7 +322,10 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
 
     plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
-    ax1.set_ylabel("Magnitude [AB]")
+    if nufnu:
+        ax1.set_ylabel(r"$\nu F_\nu~[$erg$~/~ s \cdot $cm$^2$]")
+    else:
+        ax1.set_ylabel("Magnitude [AB]")
     ax1.set_xlabel("MJD")
     ax1.invert_yaxis()
 
@@ -336,16 +342,28 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
     for key in filter_wl.keys():
         if key in bands_to_plot:
             _df = df.query(f"telescope_band == '{key}'")
-            ax1.errorbar(
-                _df.obsmjd,
-                _df.mag,
-                _df.mag_err,
-                color=cmap[key],
-                fmt=".",
-                alpha=alpha,
-                edgecolors=None,
-                label=filterlabel[key],
-            )
+            if nufnu:
+                ax1.errorbar(
+                    _df.obsmjd,
+                    utilities.abmag_to_flux(_df.mag),
+                    utilities.abmag_err_to_flux_err(_df.mag, _df.mag_err),
+                    color=cmap[key],
+                    fmt=".",
+                    alpha=alpha,
+                    edgecolors=None,
+                    label=filterlabel[key],
+                )
+            else:
+                ax1.errorbar(
+                    _df.obsmjd,
+                    _df.mag,
+                    _df.mag_err,
+                    color=cmap[key],
+                    fmt=".",
+                    alpha=alpha,
+                    edgecolors=None,
+                    label=filterlabel[key],
+                )
 
     # Now evaluate the model spectrum
     wavelengths = np.arange(1000, 60000, 10) * u.AA
@@ -385,11 +403,17 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                     wl = filter_wl[band]
                     for index, _wl in enumerate(spectrum.wave):
                         if _wl > wl:
-                            mag = utilities.flux_to_abmag(spectrum.flux[index])
+                            flux = spectrum.flux[index]
+                            mag = utilities.flux_to_abmag(flux)
                             break
                     # mag = utilities.magnitude_in_band(band, spectrum)
                     df_model = df_model.append(
-                        {"mjd": fitparams[entry]["mjd"], "band": band, "mag": mag,},
+                        {
+                            "mjd": fitparams[entry]["mjd"],
+                            "band": band,
+                            "mag": mag,
+                            "flux": flux,
+                        },
                         ignore_index=True,
                     )
 
@@ -402,18 +426,31 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                     )
 
                     spline.set_smoothing_factor(0.001)
-
-                    ax1.plot(
-                        df_model_band.mjd.values,
-                        spline(df_model_band.mjd.values),
-                        color=cmap[key],
-                    )
+                    if nufnu:
+                        ax1.plot(
+                            df_model_band.mjd.values,
+                            utilities.abmag_to_flux(spline(df_model_band.mjd.values)),
+                            color=cmap[key],
+                        )
+                    else:
+                        ax1.plot(
+                            df_model_band.mjd.values,
+                            spline(df_model_band.mjd.values),
+                            color=cmap[key],
+                        )
                 else:
-                    ax1.scatter(
-                        df_model_band.mjd.values,
-                        df_model_band.mag.values,
-                        color=cmap[key],
-                    )
+                    if nufnu:
+                        ax1.scatter(
+                            df_model_band.mjd.values,
+                            df_model_band.flux.values,
+                            color=cmap[key],
+                        )
+                    else:
+                        ax1.scatter(
+                            df_model_band.mjd.values,
+                            df_model_band.mag.values,
+                            color=cmap[key],
+                        )
 
         if fittype == "powerlaw":
             alphas = set()
@@ -425,7 +462,8 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                 alpha_errs.add(alpha_err)
             if len(alphas) == 1:
                 plt.title(
-                    f"Powerlaw spectrum fit, spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}"
+                    f"Powerlaw fit, spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}",
+                    fontsize=TITLE_FONTSIZE,
                 )
 
         if fittype == "blackbody":
@@ -442,16 +480,18 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                 extinction_rvs.add(rv)
                 extinction_av_errs.add(av_err)
                 extinction_rv_errs.add(rv_err)
-            title = "BB spectrum fit, "
+            title = "Blackbody fit, "
             if len(extinction_avs) == 1:
                 extinction_av = list(extinction_avs)[0]
                 extinction_av_err = list(extinction_av_errs)[0]
                 if extinction_av_err is not None:
-                    title += f"ext. $A_V$ = {extinction_av:.2f} $\pm$ {extinction_av_err:.2f}"
+                    title += (
+                        f"$A_V$ = {extinction_av:.2f} $\pm$ {extinction_av_err:.2f}"
+                    )
                 elif extinction_av is not None:
-                    title += f"ext. $A_V$ = {extinction_av:.2f}"
+                    title += f"$A_V$ = {extinction_av:.2f}"
                 else:
-                    title += f"ext. $A_V$ = None"
+                    title += f"$A_V$ = None"
             if len(extinction_rvs) == 1:
                 extinction_rv = list(extinction_rvs)[0]
                 extinction_rv_err = list(extinction_rv_errs)[0]
@@ -465,7 +505,7 @@ def plot_lightcurve(df, bands, fitparams=None, fittype=None, redshift=None, **kw
                     title += f", $R_V$ = None"
 
             if len(title) > 0:
-                plt.title(title)
+                plt.title(title, fontsize=TITLE_FONTSIZE)
 
     plt.legend(fontsize=FONTSIZE)
     plt.tight_layout()
