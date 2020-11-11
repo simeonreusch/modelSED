@@ -7,14 +7,16 @@ import numpy as np
 import astropy.units as u
 import matplotlib.pyplot as plt
 import pandas as pd
+from astropy import units as u
+from astropy.cosmology import Planck15 as cosmo
 from astropy import constants as const
 from scipy.interpolate import UnivariateSpline
 from . import utilities, sncosmo_spectral_v13
 
-FIG_WIDTH = 6
+FIG_WIDTH = 5
 FONTSIZE = 10
 ANNOTATION_FONTSIZE = 8
-TITLE_FONTSIZE = 12
+TITLE_FONTSIZE = 10
 DPI = 400
 
 cmap = utilities.load_info_json("cmap")
@@ -160,9 +162,7 @@ def plot_sed_from_dict(
             alpha_err = annotations["alpha_err"]
 
         ax1.plot(frequencies.value, spectrum._flux, color="black")
-        # ugly hack
-        # ax1.plot(frequencies.value, bb_spectrum._flux, color="blue")
-        #
+
         for key in mags.keys():
             mag = mags[key]["observed"]
             mag_err = mags[key]["observed_err"]
@@ -258,12 +258,12 @@ def plot_luminosity(fitparams, fittype, **kwargs):
             radius.append(fitparams[entry]["radius"])
             radius_err.append(fitparams[entry]["radius_err"])
 
-    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=DPI)
+    plt.figure(figsize=(FIG_WIDTH, 1 / 1.414 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     ax1.set_xlabel("MJD")
 
     if fittype == "blackbody":
-        ax1.set_ylabel("Blackbody luminosity [erg/s]")
+        ax1.set_ylabel(r"Blackbody luminosity [erg s$^{-1}$]")
         plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
 
         if bolo_lumi_err[0] is not None:
@@ -299,9 +299,9 @@ def plot_luminosity(fitparams, fittype, **kwargs):
         ax2.yaxis.label.set_color("red")
         ax1.yaxis.label.set_color("blue")
     else:
-        ax1.set_ylabel("Intrinsic luminosity [erg/s]")
-        ax1.plot(mjds, lumi_without_nir, label="UV to Optical")
-        ax1.plot(mjds, lumi_with_nir, label="UV to NIR")
+        ax1.set_ylabel(r"Intrinsic luminosity [erg s$^{-1}$]")
+        ax1.plot(mjds, lumi_without_nir, label="UV to Optical", color="tab:blue")
+        ax1.plot(mjds, lumi_with_nir, label="UV to NIR", color="tab:red")
         ax1.legend(fontsize=FONTSIZE)
 
     plt.tight_layout()
@@ -320,14 +320,14 @@ def plot_lightcurve(
     mjd_min = np.min(mjds)
     mjd_max = np.max(mjds)
 
-    plt.figure(figsize=(FIG_WIDTH, 0.6 * FIG_WIDTH), dpi=DPI)
+    plt.figure(figsize=(FIG_WIDTH, 1 / 1.414 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     if nufnu:
-        ax1.set_ylabel(r"$\nu F_\nu~[$erg$~/~ s \cdot $cm$^2$]")
+        ax1.set_ylabel(r"F$_\nu$ [erg s$^{-1}$ cm$^{-2}$]")
     else:
         ax1.set_ylabel("Magnitude [AB]")
+        ax1.invert_yaxis()
     ax1.set_xlabel("MJD")
-    ax1.invert_yaxis()
 
     if bands is None:
         bands_to_plot = df.band.unique()
@@ -342,6 +342,8 @@ def plot_lightcurve(
     for key in filter_wl.keys():
         if key in bands_to_plot:
             _df = df.query(f"telescope_band == '{key}'")
+            wl = filter_wl[key]
+            nu = utilities.lambda_to_nu(wl)
             if nufnu:
                 ax1.errorbar(
                     _df.obsmjd,
@@ -419,6 +421,9 @@ def plot_lightcurve(
 
         for key in filter_wl.keys():
             if key in bands_to_plot:
+                wl = filter_wl[key]
+                nu = utilities.lambda_to_nu(wl)
+
                 df_model_band = df_model.query(f"band == '{key}'")
                 if len(df_model_band) > 1:
                     spline = UnivariateSpline(
@@ -460,11 +465,10 @@ def plot_lightcurve(
                 alpha_err = fitparams[entry]["alpha_err"]
                 alphas.add(alpha)
                 alpha_errs.add(alpha_err)
-            if len(alphas) == 1:
-                plt.title(
-                    f"Powerlaw fit, spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}",
-                    fontsize=TITLE_FONTSIZE,
-                )
+            # if len(alphas) == 1:
+            #     plt.title(
+            #         f"Powerlaw fit, spectral index $\\alpha$ = {list(alphas)[0]:.2f} $\pm$ {list(alpha_errs)[0]:.2f}", fontsize=TITLE_FONTSIZE,
+            #     )
 
         if fittype == "blackbody":
             extinction_avs = set()
@@ -504,10 +508,20 @@ def plot_lightcurve(
                 else:
                     title += f", $R_V$ = None"
 
-            if len(title) > 0:
-                plt.title(title, fontsize=TITLE_FONTSIZE)
+            # if len(title) > 0:
+            #     plt.title(title, fontsize=TITLE_FONTSIZE)
+
+    # if redshift is not None:
+    #     d = cosmo.luminosity_distance(redshift)
+    #     d = d.to(u.cm).value
+    #     lumi = lambda flux: flux * 4 * np.pi * d ** 2
+    #     flux = lambda lumi: lumi / (4 * np.pi * d ** 2)
+    #     ax2 = ax1.secondary_yaxis("right", functions=(lumi, flux))
+    #     ax2.tick_params(axis="y", which="major", labelsize=FONTSIZE)
+    #     ax2.set_ylabel(r"$\nu$ L$_\nu$ [erg s$^{-1}$]")
 
     plt.legend(fontsize=FONTSIZE)
+    plt.grid(which="both", alpha=0.15)
     plt.tight_layout()
     if fitparams:
         plt.savefig(f"plots/lightcurve_{fittype}.png")
@@ -628,6 +642,30 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
             "top", functions=(utilities.nu_to_lambda, utilities.lambda_to_nu)
         )
         ax2.set_xlabel(r"$\nu$ [Hz]")
+
+        # # begin ugly hack
+        # # Swift V
+        # mjd = annotations["mjd"]
+
+        # mags_v = {58714.54667777777: [17.7093705099824, 0.159859385437542], 58715.650394444434: [17.3533111527872, 0.153035370548604], 58716.51125555553: [17.0886959322036, 0.213560248915708], 58718.47233888889: [17.4349390440326, 0.172562127107652]}
+        # mags_b = {58714.54667777777: [17.6337374189878, 0.100476947040498], 58715.650394444434: [17.5348778339957, 0.109744027303754], 58716.51125555553: [17.5482380417231, 0.170389000863806], 58718.47233888889: [17.3444649425843, 0.104057279236277]}
+        # ax1.errorbar(
+        #     filter_wl["Swift+V"],
+        #     mags_v[mjd][0],
+        #     mags_v[mjd][1],
+        #     color=cmap["Swift+V"],
+        #     fmt=".",
+        #     label=filterlabel["Swift+V"],
+        #     )
+        # ax1.errorbar(
+        #     filter_wl["Swift+B"],
+        #     mags_b[mjd][0],
+        #     mags_b[mjd][1],
+        #     color=cmap["Swift+B"],
+        #     fmt=".",
+        #     label=filterlabel["Swift+B"],
+        #     )
+        # # end of ugly hack
 
     bbox = dict(boxstyle="round", fc="none", ec="black")
     bbox2 = dict(boxstyle="round", fc="none", ec="blue")
