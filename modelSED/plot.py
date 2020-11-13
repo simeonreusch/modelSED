@@ -6,6 +6,7 @@ import os
 import numpy as np
 import astropy.units as u
 import matplotlib.pyplot as plt
+import matplotlib
 import pandas as pd
 from astropy import units as u
 from astropy.cosmology import Planck15 as cosmo
@@ -13,11 +14,25 @@ from astropy import constants as const
 from scipy.interpolate import UnivariateSpline
 from . import utilities, sncosmo_spectral_v13
 
+
 FIG_WIDTH = 5
 FONTSIZE = 10
+FONTSIZE_TICKMARKS = 9
+FONTSIZE_LEGEND = 12
+FONTSIZE_LABEL = 12
 ANNOTATION_FONTSIZE = 8
 TITLE_FONTSIZE = 10
 DPI = 400
+
+
+XRTCOLUMN = "flux0310_pi_-2"
+nice_fonts = {
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": "Times New Roman",
+}
+matplotlib.rcParams.update(nice_fonts)
+
 
 cmap = utilities.load_info_json("cmap")
 filter_wl = utilities.load_info_json("filter_wl")
@@ -89,7 +104,7 @@ def plot_sed_from_flux(
             color="gray",
             label="model spectrum",
         )
-        ax1.set_ylabel("Magnitude [AB]")
+        ax1.set_ylabel("Magnitude [AB]", fontsize=FONTSIZE_LABEL)
     else:
         if flux_err is not None:
             ax1.errorbar(
@@ -104,14 +119,16 @@ def plot_sed_from_flux(
             color="gray",
             label="model spectrum",
         )
-        ax1.set_ylabel(r"$F_\nu~[$erg$~/~ s \cdot $cm$^2 \cdot$ Hz]")
+        ax1.set_ylabel(
+            r"F_$\nu$ [erg s$^{-1}$ cm$^{-2}$ Hz^${-1}$]", fontsize=FONTSIZE_LABEL
+        )
 
     ax2 = ax1.secondary_xaxis(
         "top", functions=(utilities.lambda_to_nu, utilities.nu_to_lambda)
     )
-    ax2.set_xlabel(r"$\nu$ [Hz]")
-    ax1.set_xlabel(r"$\lambda~[\AA]$")
-    plt.legend()
+    ax2.set_xlabel(r"$\nu$ [Hz]", fontsize=FONTSIZE_LABEL)
+    ax1.set_xlabel(r"$\lambda$ [Å]", fontsize=FONTSIZE_LABEL)
+    plt.legend(fontsize=FONTSIZE_LEGEND)
 
     if plotmag:
         if index is not None:
@@ -179,10 +196,10 @@ def plot_sed_from_dict(
         ax2 = ax1.secondary_xaxis(
             "top", functions=(utilities.lambda_to_nu, utilities.nu_to_lambda)
         )
-        ax2.set_xlabel(r"$\lambda~[\AA]$")
+        ax2.set_xlabel(r"$\lambda$ [Å]")
     else:
         ax1.set_ylabel("Magnitude [AB]")
-        ax1.set_xlabel(r"$\lambda$")
+        ax1.set_xlabel(r"$\lambda$ [Å]")
         ax1.invert_yaxis()
         ax1.set_ylim([21, 17])
         ax1.plot(spectrum.wave, spectrum_mags)
@@ -229,7 +246,7 @@ def plot_sed_from_dict(
             annotation_location = (2e4, 18.0)
 
         ax1.legend(
-            fontsize=FONTSIZE, fancybox=True, edgecolor="black", loc=0,
+            fontsize=FONTSIZE_LEGEND, fancybox=True, edgecolor="black", loc=0,
         )
 
     plt.savefig(os.path.join(outpath, f"{mjd}.png"))
@@ -260,11 +277,13 @@ def plot_luminosity(fitparams, fittype, **kwargs):
 
     plt.figure(figsize=(FIG_WIDTH, 1 / 1.414 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
-    ax1.set_xlabel("MJD")
+    ax1.set_xlabel("Date [MJD]")
 
     if fittype == "blackbody":
-        ax1.set_ylabel(r"Blackbody luminosity [erg s$^{-1}$]")
-        plot1 = ax1.plot(mjds, bolo_lumi, label="Blackbody luminosity", color="blue")
+        ax1.set_ylabel(r"Blackbody luminosity [erg s$^{-1}$]", fontsize=FONTSIZE_LABEL)
+        plot1 = ax1.plot(
+            mjds, bolo_lumi, label="Blackbody luminosity", color="tab:blue", alpha=0
+        )
 
         if bolo_lumi_err[0] is not None:
             bolo_lumi = np.asarray(bolo_lumi)
@@ -274,12 +293,14 @@ def plot_luminosity(fitparams, fittype, **kwargs):
                 bolo_lumi - bolo_lumi_err,
                 bolo_lumi + bolo_lumi_err,
                 label="Blackbody luminosity",
-                color="blue",
-                alpha=0.1,
+                color="tab:blue",
+                alpha=0.3,
             )
 
         ax2 = ax1.twinx()
-        plot2 = ax2.plot(mjds, radius, color="red", label="Blackbody radius")
+        plot2 = ax2.plot(
+            mjds, radius, color="tab:red", label="Blackbody radius", alpha=0
+        )
 
         if radius_err[0] is not None:
             radius = np.asarray(radius)
@@ -288,22 +309,23 @@ def plot_luminosity(fitparams, fittype, **kwargs):
                 mjds,
                 radius - radius_err,
                 radius + radius_err,
-                color="red",
+                color="tab:red",
                 label="Blackbody radius",
-                alpha=0.1,
+                alpha=0.3,
             )
 
-        ax2.set_ylabel("Blackbody radius [cm]")
+        ax2.set_ylabel("Blackbody radius [cm]", fontsize=FONTSIZE_LABEL)
         plots = plot1 + plot2
         labels = [p.get_label() for p in plots]
-        ax2.yaxis.label.set_color("red")
-        ax1.yaxis.label.set_color("blue")
+        ax2.yaxis.label.set_color("tab:red")
+        ax1.yaxis.label.set_color("tab:blue")
     else:
-        ax1.set_ylabel(r"Intrinsic luminosity [erg s$^{-1}$]")
+        ax1.set_ylabel(r"Intrinsic luminosity [erg s$^{-1}$]", fontsize=FONTSIZE_LABEL)
         ax1.plot(mjds, lumi_without_nir, label="UV to Optical", color="tab:blue")
         ax1.plot(mjds, lumi_with_nir, label="UV to NIR", color="tab:red")
-        ax1.legend(fontsize=FONTSIZE)
+        ax1.legend(fontsize=FONTSIZE_LEGEND)
 
+    plt.grid(which="both", axis="both", alpha=0.15)
     plt.tight_layout()
     plt.savefig(f"plots/luminosity_{fittype}.png")
     plt.close()
@@ -323,11 +345,14 @@ def plot_lightcurve(
     plt.figure(figsize=(FIG_WIDTH, 1 / 1.414 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
     if nufnu:
-        ax1.set_ylabel(r"F$_\nu$ [erg s$^{-1}$ cm$^{-2}$]")
+        ax1.set_ylabel(
+            r"F$_\nu$ [erg s$^{-1}$ cm$^{-2}$ Hz$^{-1}$]", fontsize=FONTSIZE_LABEL
+        )
+        plt.yscale("log")
     else:
-        ax1.set_ylabel("Magnitude [AB]")
+        ax1.set_ylabel("Magnitude [AB]", fontsize=FONTSIZE_LABEL)
         ax1.invert_yaxis()
-    ax1.set_xlabel("MJD")
+    ax1.set_xlabel("Date [MJD]", fontsize=FONTSIZE_LABEL)
 
     if bands is None:
         bands_to_plot = df.band.unique()
@@ -518,9 +543,10 @@ def plot_lightcurve(
     #     flux = lambda lumi: lumi / (4 * np.pi * d ** 2)
     #     ax2 = ax1.secondary_yaxis("right", functions=(lumi, flux))
     #     ax2.tick_params(axis="y", which="major", labelsize=FONTSIZE)
-    #     ax2.set_ylabel(r"$\nu$ L$_\nu$ [erg s$^{-1}$]")
+    #     ax2.set_ylabel(r"$\nu$ L$_\nu$ [erg s$^{-1}$]", labelsize=FONTSIZE_LABEL)
+    ax1.tick_params(axis="both", which="major", labelsize=FONTSIZE_TICKMARKS)
 
-    plt.legend(fontsize=FONTSIZE)
+    plt.legend(fontsize=FONTSIZE_LEGEND)  # , loc=(0.25,0.06))
     plt.grid(which="both", alpha=0.15)
     plt.tight_layout()
     if fitparams:
@@ -533,12 +559,12 @@ def plot_lightcurve(
 
 def plot_temperature(fitparams, **kwargs):
     """ """
-    plt.figure(figsize=(FIG_WIDTH, 0.5 * FIG_WIDTH), dpi=DPI)
+    plt.figure(figsize=(FIG_WIDTH, 1 / 1.414 * FIG_WIDTH), dpi=DPI)
     ax1 = plt.subplot(111)
-    ax1.set_ylabel("Temperature [K]")
-    ax1.set_xlabel("MJD")
+    ax1.set_ylabel("Temperature [K]", fontsize=FONTSIZE_LABEL)
+    ax1.set_xlabel("Date [MJD]", fontsize=FONTSIZE_LABEL)
     ax2 = ax1.twinx()
-    ax2.set_ylabel("Radius [cm]")
+    ax2.set_ylabel("Blackbody radius [cm]", fontsize=FONTSIZE_LABEL)
 
     mjds = []
     temps = []
@@ -553,25 +579,25 @@ def plot_temperature(fitparams, **kwargs):
         radii.append(fitparams[entry]["radius"])
         radii_err.append(fitparams[entry]["radius_err"])
 
-    ax1.plot(mjds, temps, color="blue")
-    ax2.plot(mjds, radii, color="red")
+    # ax1.plot(mjds, temps, color="blue")
+    # ax2.plot(mjds, radii, color="red")
 
     if temps_err[0] is not None:
         temps = np.asarray(temps)
         temps_err = np.asarray(temps_err)
         ax1.fill_between(
-            mjds, temps - temps_err, temps + temps_err, color="blue", alpha=0.1
+            mjds, temps - temps_err, temps + temps_err, color="tab:blue", alpha=0.3
         )
 
     if radii_err[0] is not None:
         radii = np.asarray(radii)
         radii_err = np.asarray(radii_err)
         ax2.fill_between(
-            mjds, radii - radii_err, radii + radii_err, color="red", alpha=0.1
+            mjds, radii - radii_err, radii + radii_err, color="tab:red", alpha=0.3
         )
 
-    ax1.yaxis.label.set_color("blue")
-    ax2.yaxis.label.set_color("red")
+    ax1.yaxis.label.set_color("tab:blue")
+    ax2.yaxis.label.set_color("tab:red")
     plt.tight_layout()
     plt.savefig(f"plots/temperature_radius.png")
     plt.close()
@@ -597,8 +623,10 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
     plt.xscale("log")
 
     if not plotmag:
-        ax1.set_ylabel(r"$F_\nu~[$erg$~/~ s \cdot $cm$^2 \cdot$ Hz]")
-        ax1.set_xlabel(r"$\nu$ [Hz]")
+        ax1.set_ylabel(
+            r"$F_\nu~[$erg$~/~ s \cdot $cm$^2 \cdot$ Hz]", fontsize=FONTSIZE_LABEL
+        )
+        ax1.set_xlabel(r"Frequency [Hz]", fontsize=FONTSIZE_LABEL)
         plt.yscale("log")
         ax1.set_ylim([2e-28, 4e-27])
         ax1.set_xlim([3.5e14, 2e15])
@@ -621,10 +649,10 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
         ax2 = ax1.secondary_xaxis(
             "top", functions=(utilities.lambda_to_nu, utilities.nu_to_lambda)
         )
-        ax2.set_xlabel(r"$\lambda~[\AA]$")
+        ax2.set_xlabel(r"Wavelength [Å]", fontsize=FONTSIZE_LABEL)
     else:
-        ax1.set_ylabel("Magnitude [AB]")
-        ax1.set_xlabel(r"$\lambda$")
+        ax1.set_ylabel("Magnitude [AB]", fontsize=FONTSIZE_LABEL)
+        ax1.set_xlabel(r"Wavelength [Å]", fontsize=FONTSIZE_LABEL)
         ax1.invert_yaxis()
         ax1.set_ylim([21, 16])
         ax1.plot(spectrum.wave, utilities.flux_to_abmag(spectrum._flux))
@@ -641,7 +669,7 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
         ax2 = ax1.secondary_xaxis(
             "top", functions=(utilities.nu_to_lambda, utilities.lambda_to_nu)
         )
-        ax2.set_xlabel(r"$\nu$ [Hz]")
+        ax2.set_xlabel(r"Frequency [Hz]", fontsize=FONTSIZE_LABEL)
 
         # # begin ugly hack
         # # Swift V
@@ -696,17 +724,20 @@ def plot_sed(df, spectrum, annotations: dict = None, plotmag: bool = False, **kw
         # else:
         annotation_location = (2e4, 18.0)
 
+        bbox = dict(boxstyle="round", fc="1")
+
         ax1.text(
-            0.65,
-            0.4,
+            0.3,
+            0.07,
             annotationstr,
             transform=ax1.transAxes,
-            fontsize=ANNOTATION_FONTSIZE,
+            bbox=bbox,
+            fontsize=FONTSIZE_LEGEND - 2,
         )
 
     ax1.legend(
-        fontsize=FONTSIZE, fancybox=True, edgecolor="black", loc=0,
+        fontsize=FONTSIZE_LEGEND - 2, fancybox=True, edgecolor="black", loc=0,
     )
-
+    plt.tight_layout()
     plt.savefig(os.path.join(outpath, f"{mjd}.png"))
     plt.close()
