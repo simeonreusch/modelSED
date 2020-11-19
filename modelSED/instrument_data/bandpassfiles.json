@@ -10,5 +10,7 @@
     "Swift+V": "instrument_data/bandpasses/csv/swift_V.csv",
     "P200+J": "instrument_data/bandpasses/csv/P200_J.csv",
     "P200+H": "instrument_data/bandpasses/csv/P200_H.csv",
-    "P200+Ks": "instrument_data/bandpasses/csv/P200_Ks.csv"
+    "P200+Ks": "instrument_data/bandpasses/csv/P200_Ks.csv",
+    "WISE+W1": "instrument_data/bandpasses/csv/wise_W1.csv",
+    "WISE+W2": "instrument_data/bandpasses/csv/wise_W2.csv"
     }

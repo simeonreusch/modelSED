@@ -7,5 +7,7 @@
             "swift_V": "instrument_data/bandpasses/dat/Swift_UVOT.V.dat",
             "P200_J": "instrument_data/bandpasses/dat/P200_WIRC.Jcont.dat",
             "P200_H": "instrument_data/bandpasses/dat/P200_WIRC.Hcont.dat",
-            "P200_Ks": "instrument_data/bandpasses/dat/P200_WIRC.Ks.dat"
+            "P200_Ks": "instrument_data/bandpasses/dat/P200_WIRC.Ks.dat",
+            "WISE+W1": "instrument_data/bandpasses/dat/WISE_WISE.W1.dat",
+            "WISE+W2": "instrument_data/bandpasses/dat/WISE_WISE.W2.dat"
         }

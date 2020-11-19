@@ -15,5 +15,7 @@
     "Fermi+LAT": 3e-8,
     "VLA+3GHz": 1e9,
     "VLA+10GHz": 3e8,
-    "VLA+6GHz": 4.997e8
+    "VLA+6GHz": 4.997e8,
+    "WISE+W1": 33156.56,
+    "WISE+W2": 45644.99
 }

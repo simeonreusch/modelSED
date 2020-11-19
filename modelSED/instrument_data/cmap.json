@@ -10,5 +10,7 @@
     "Swift+UVW2": "black",
     "P200+J": "black",
     "P200+H": "gray",
-    "P200+Ks": "blue"
+    "P200+Ks": "blue",
+    "WISE+W1": "tab:blue",
+    "WISE+W2": "tab:red"
 }
