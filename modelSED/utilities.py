@@ -95,7 +95,7 @@ def nu_to_ev(nu):
     """
     Convert frequency in Hertz to energy in eV
     """
-    energy = const.h.value * const.c.value / (utilities.nu_to_lambda(nu) * 1e-10)
+    energy = const.h.value * const.c.value / (nu_to_lambda(nu) * 1e-10)
     ev = energy / 1.602e-19
     return ev
 
@@ -105,7 +105,7 @@ def ev_to_nu(ev):
     Convert energy in eV to frequency in Hertz
     """
     lam = const.h.value * const.c.value / (ev * 1e-10)
-    nu = utilities.lambda_to_nu(lam)
+    nu = lambda_to_nu(lam)
     return nu
 
 
