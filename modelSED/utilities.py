@@ -64,6 +64,9 @@ def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
 
 
 def lambda_to_nu(wavelength):
+    """
+    Convert wavelength in angstrom to frequency in Hz
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         nu_value = const.c.value / (wavelength * 1e-10)  # Hz
@@ -71,6 +74,9 @@ def lambda_to_nu(wavelength):
 
 
 def nu_to_lambda(nu):
+    """
+    Convert frequency in Hertz to wavelength in angstrom
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         lambda_value = const.c.value / (nu * 1e-10)  # Angstrom
@@ -83,6 +89,41 @@ def flux_nu_to_lambda(fluxnu, wav):
 
 def flux_lambda_to_nu(fluxlambda, wav):
     return np.asarray(fluxlambda) * 3.33564095e-19 * (np.asarray(wav) ** 2) * FNU
+
+
+def nu_to_ev(nu):
+    """
+    Convert frequency in Hertz to energy in eV
+    """
+    energy = const.h.value * const.c.value / (utilities.nu_to_lambda(nu) * 1e-10)
+    ev = energy / 1.602e-19
+    return ev
+
+
+def ev_to_nu(ev):
+    """
+    Convert energy in eV to frequency in Hertz
+    """
+    lam = const.h.value * const.c.value / (ev * 1e-10)
+    nu = utilities.lambda_to_nu(lam)
+    return nu
+
+
+def lambda_to_ev(lam):
+    """
+    Convert wavelength in angstrom to energy in eV
+    """
+    energy = const.h.value * const.c.value / (nu * 1e-10)
+    ev = energy / 1.602e-19
+    return ev
+
+
+def ev_to_lambda(ev):
+    """
+    Convert energy in eV to wavelength in angstrom
+    """
+    lam = const.h.value * const.c.value / (ev * 1e-10)
+    return lam
 
 
 def magnitude_in_band(band: str, spectrum):
@@ -184,13 +225,16 @@ def calculate_bolometric_luminosity(
             (del_luminosity_T ** 2 * (temperature_err) ** 2)
             + (del_luminosity_r ** 2 * radius_m_err ** 2)
         )
-
+        print("temp and radius error given")
     elif temperature_err is not None and radius_m_err is None:
         luminosity_err_watt = np.sqrt((del_luminosity_T ** 2 * (temperature_err) ** 2))
+        print("temp error given")
     elif temperature_err is None and radius_m_err is not None:
         luminosity_err_watt = np.sqrt((del_luminosity_r ** 2 * radius_m_err ** 2))
+        print("radius error given")
     else:
-        luminosity_err_watt is None
+        luminosity_err_watt = None
+        print("no error given")
 
     if luminosity_err_watt is not None:
         luminosity_err = luminosity_err_watt.to(u.erg / u.s)
