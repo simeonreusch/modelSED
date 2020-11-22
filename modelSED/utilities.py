@@ -113,7 +113,7 @@ def lambda_to_ev(lam):
     """
     Convert wavelength in angstrom to energy in eV
     """
-    energy = const.h.value * const.c.value / (nu * 1e-10)
+    energy = const.h.value * const.c.value / (lam * 1e-10)
     ev = energy / 1.602e-19
     return ev
 
