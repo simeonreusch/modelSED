@@ -19,7 +19,7 @@ CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
 
 
-def flux_to_abmag(flux_nu, flux_nu_zp=48.585):
+def flux_to_abmag(flux_nu, flux_nu_zp=48.6):
     flux_nu = np.asarray(flux_nu, dtype=float)
     flux_nu_zp = np.asarray(flux_nu_zp, dtype=float)
     return (-2.5 * np.log10(np.asarray(flux_nu))) - flux_nu_zp
@@ -29,7 +29,7 @@ def flux_err_to_abmag_err(flux_nu, flux_nu_err):
     return 1.08574 / flux_nu * flux_nu_err
 
 
-def abmag_to_flux(abmag, magzp=48.585):
+def abmag_to_flux(abmag, magzp=48.6):
     magzp = np.asarray(magzp, dtype=float)
     abmag = np.asarray(abmag, dtype=float)
     flux = np.power(10, (-(abmag + magzp) / 2.5))
