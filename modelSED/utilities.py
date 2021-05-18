@@ -7,7 +7,7 @@ import numpy as np
 import astropy.units as u
 from astropy import constants as const
 import sncosmo
-from extinction import ccm89, apply, remove
+from extinction import ccm89, apply, remove, calzetti00
 from astropy.cosmology import Planck15 as cosmo
 from astropy.modeling.models import BlackBody
 from . import sncosmo_spectral_v13
@@ -17,6 +17,11 @@ FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
+
+def wise_vega_to_ab(vegamag, band):
+    corrections = {"W1": 2.699, "W2": 3.339, "W3": 5.174, "W4": 6.620}
+    abmag = vegamag + corrections[band]
+    return abmag
 
 
 def flux_to_abmag(flux_nu, flux_nu_zp=48.6):
@@ -159,12 +164,12 @@ def magnitude_in_band(band: str, spectrum):
 def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float):
     """ """
     # First we redshift the spectrum
-    spectrum.z = 0
-    spectrum_redshifted = spectrum.redshifted_to(redshift, cosmo=cosmo)
+    spectrum.z = redshift
+    spectrum_redshifted = spectrum
+    # spectrum_redshifted = spectrum.redshifted_to(redshift, cosmo=cosmo)
     full_spectrum = spectrum_redshifted
     full_wavelength = full_spectrum._wave
     full_flux = full_spectrum._flux
-
     masked_wl = np.ma.masked_outside(full_wavelength, wl_min, wl_max)
     mask = np.ma.getmask(masked_wl)
 
@@ -176,13 +181,14 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
     d = d.to(u.cm)
 
     flux = np.trapz(cut_flux, cut_freq) * u.erg / u.cm ** 2 / u.s
+
+    print(f"integrated flux: {np.abs(flux):.2e}")
     luminosity = np.abs(flux * 4 * np.pi * d ** 2)
 
     return luminosity
 
 
 def calculate_bolometric_luminosity(
-    bolometric_flux: float,
     temperature: float,
     scale: float,
     redshift: float,
@@ -193,8 +199,8 @@ def calculate_bolometric_luminosity(
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.m)
 
-    radius_m = np.sqrt(d ** 2 / scale)
-    radius_cm = np.sqrt(d ** 2 / scale) * (100 * u.cm) / u.m
+    radius_m = np.sqrt(d ** 2 / scale) / np.sqrt(np.pi)
+    radius_cm = np.sqrt(d ** 2 / scale) * (100 * u.cm) / u.m / np.sqrt(np.pi)
 
     temperature = temperature * u.K
 
@@ -266,7 +272,7 @@ def powerlaw_spectrum(
 
     if extinction_av is not None:
         flux_lambda_reddened = apply(
-            ccm89(np.asarray(wavelengths), extinction_av, extinction_rv),
+            calzetti00(np.asarray(wavelengths), extinction_av, extinction_rv),
             np.asarray(flux_lambda),
         )
 
@@ -326,7 +332,7 @@ def broken_powerlaw_spectrum(
 
     if extinction_av is not None:
         flux_lambda_reddened = apply(
-            ccm89(np.asarray(wavelengths), extinction_av, extinction_rv),
+            calzetti00(np.asarray(wavelengths), extinction_av, extinction_rv),
             np.asarray(flux_lambda),
         )
 
@@ -376,18 +382,19 @@ def blackbody_spectrum(
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
     scale_lambda = 1 * FLAM / u.sr
-    scale_nu = 1 * FNU / u.sr
-    # Blackbody of scale 1
+    scale_lambda = 1/scale * FLAM / u.sr
+    scale_nu = 1/scale * FNU / u.sr
+
+
     bb_nu = BlackBody(temperature=temperature * u.K, scale=scale_nu)
-    flux_nu_unscaled = bb_nu(wavelengths) * u.sr
-    flux_nu = flux_nu_unscaled / scale
-    bolometric_flux_unscaled = bb_nu.bolometric_flux.value
+    flux_nu = bb_nu(wavelengths) * u.sr
+    bolometric_flux = bb_nu.bolometric_flux.value
 
     flux_lambda = flux_nu_to_lambda(flux_nu, wavelengths)
 
     if extinction_av is not None:
         flux_lambda_reddened = apply(
-            ccm89(np.asarray(wavelengths), extinction_av, extinction_rv),
+            calzetti00(np.asarray(wavelengths), extinction_av, extinction_rv),
             np.asarray(flux_lambda),
         )
         flux_nu_reddened = flux_lambda_to_nu(flux_lambda_reddened, wavelengths)
@@ -419,7 +426,7 @@ def blackbody_spectrum(
             outspectrum = spectrum_unreddened
 
     if get_bolometric_flux:
-        return outspectrum, bolometric_flux_unscaled
+        return outspectrum, bolometric_flux
     else:
         return outspectrum
 
