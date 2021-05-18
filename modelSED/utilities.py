@@ -18,6 +18,7 @@ FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
 
+
 def wise_vega_to_ab(vegamag, band):
     corrections = {"W1": 2.699, "W2": 3.339, "W3": 5.174, "W4": 6.620}
     abmag = vegamag + corrections[band]
@@ -382,9 +383,8 @@ def blackbody_spectrum(
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
     scale_lambda = 1 * FLAM / u.sr
-    scale_lambda = 1/scale * FLAM / u.sr
-    scale_nu = 1/scale * FNU / u.sr
-
+    scale_lambda = 1 / scale * FLAM / u.sr
+    scale_nu = 1 / scale * FNU / u.sr
 
     bb_nu = BlackBody(temperature=temperature * u.K, scale=scale_nu)
     flux_nu = bb_nu(wavelengths) * u.sr
