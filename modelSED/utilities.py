@@ -18,7 +18,6 @@ FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
 
-
 def wise_vega_to_ab(vegamag, band):
     corrections = {"W1": 2.699, "W2": 3.339, "W3": 5.174, "W4": 6.620}
     abmag = vegamag + corrections[band]
@@ -175,16 +174,17 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
     mask = np.ma.getmask(masked_wl)
 
     cut_wl = np.ma.compressed(masked_wl) * u.AA
-    cut_flux = np.ma.compressed(np.ma.masked_where(mask, full_flux))
-    cut_freq = const.c.value / (cut_wl * 1e-10) * u.Hz
+    cut_flux = np.ma.compressed(np.ma.masked_where(mask, full_flux)) * FNU
+    cut_freq = const.c.value / (cut_wl * 1e-10) * u.Hz * u.AA
 
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.cm)
 
-    flux = np.trapz(cut_flux, cut_freq) * u.erg / u.cm ** 2 / u.s
+    flux = np.trapz(cut_flux, cut_freq)# * u.erg / u.cm ** 2 / u.s
 
     print(f"integrated flux: {np.abs(flux):.2e}")
     luminosity = np.abs(flux * 4 * np.pi * d ** 2)
+    print(f"luminosity: {luminosity:.2e}")
 
     return luminosity
 
@@ -210,7 +210,8 @@ def calculate_bolometric_luminosity(
 
     # calculate errors
     if scale_err is not None:
-        radius_m_err = np.sqrt((d ** 2 / (4 * scale ** 3)) * scale_err ** 2)
+        radius_m_err = np.sqrt(d**2/( np.pi * scale**3 ) ) / 2 * scale_err
+        # radius_m_err = np.sqrt((d ** 2 / (4 * scale ** 3)) * scale_err ** 2) / np.sqrt(np.pi)
         radius_cm_err = radius_m_err * (100 * u.cm) / u.m
     else:
         radius_m_err = None
@@ -232,16 +233,16 @@ def calculate_bolometric_luminosity(
             (del_luminosity_T ** 2 * (temperature_err) ** 2)
             + (del_luminosity_r ** 2 * radius_m_err ** 2)
         )
-        print("temp and radius error given")
+        # print("temp and radius error given")
     elif temperature_err is not None and radius_m_err is None:
         luminosity_err_watt = np.sqrt((del_luminosity_T ** 2 * (temperature_err) ** 2))
-        print("temp error given")
+        # print("temp error given")
     elif temperature_err is None and radius_m_err is not None:
         luminosity_err_watt = np.sqrt((del_luminosity_r ** 2 * radius_m_err ** 2))
-        print("radius error given")
+        # print("radius error given")
     else:
         luminosity_err_watt = None
-        print("no error given")
+        # print("no error given")
 
     if luminosity_err_watt is not None:
         luminosity_err = luminosity_err_watt.to(u.erg / u.s)
@@ -383,12 +384,13 @@ def blackbody_spectrum(
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
     scale_lambda = 1 * FLAM / u.sr
-    scale_lambda = 1 / scale * FLAM / u.sr
-    scale_nu = 1 / scale * FNU / u.sr
+    scale_lambda = 1/scale * FLAM / u.sr
+    scale_nu = 1/scale * FNU / u.sr
+
 
     bb_nu = BlackBody(temperature=temperature * u.K, scale=scale_nu)
     flux_nu = bb_nu(wavelengths) * u.sr
-    bolometric_flux = bb_nu.bolometric_flux.value
+    bolometric_flux = bb_nu.bolometric_flux#.value
 
     flux_lambda = flux_nu_to_lambda(flux_nu, wavelengths)
 
@@ -409,7 +411,7 @@ def blackbody_spectrum(
         if extinction_av is not None:
             spectrum_reddened.z = 0
             spectrum_reddened_redshifted = spectrum_reddened.redshifted_to(
-                redshift, cosmo=cosmo
+                redshift, cosmo=cosmo,
             )
             outspectrum = spectrum_reddened_redshifted
         else:
