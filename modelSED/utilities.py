@@ -67,6 +67,16 @@ def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
         sigma_f = np.sqrt(del_f ** 2 * (abmag_err + magzp_err) ** 2)
     return sigma_f
 
+def mag_to_absmag(magnitude, z):
+    """
+    Convert apparent magnitude to absolute magnitude
+    based on redshift z 
+    """
+    luminosity_distance = cosmo.luminosity_distance(z).to(u.pc)
+    distance_modulus = 5*np.log10(luminosity_distance.value) - 5
+    absolute_magnitude = magnitude - distance_modulus
+    
+    return absolute_magnitude
 
 def lambda_to_nu(wavelength):
     """
