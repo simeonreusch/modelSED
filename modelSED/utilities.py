@@ -23,6 +23,10 @@ def wise_vega_to_ab(vegamag, band):
     abmag = vegamag + corrections[band]
     return abmag
 
+def p200_vega_to_ab(band, mag):
+    corrections = {"P200+J": 0.91, "P200+H": 1.39, "P200+Ks": 1.85}
+    abmag = mag + corrections[band]
+    return abmag
 
 def flux_to_abmag(flux_nu, flux_nu_zp=48.6):
     flux_nu = np.asarray(flux_nu, dtype=float)
