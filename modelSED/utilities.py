@@ -20,12 +20,26 @@ INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument
 
 def wise_vega_to_ab(vegamag, band):
     corrections = {"W1": 2.699, "W2": 3.339, "W3": 5.174, "W4": 6.620}
-    abmag = vegamag + corrections[band]
+    if isinstance(vegamag, float):
+        abmag = vegamag + corrections[band]
+    elif isinstance(vegamag, list) or isinstance(vegamag, np.ndarray):
+        abmag = []
+        for entry in vegamag:
+            abmag.append(entry + corrections[band])
+    else:
+        raise ValueError
     return abmag
 
-def p200_vega_to_ab(band, mag):
+def p200_vega_to_ab(vegamag, band):
     corrections = {"P200+J": 0.91, "P200+H": 1.39, "P200+Ks": 1.85}
-    abmag = mag + corrections[band]
+    if isinstance(vegamag, float):
+        abmag = vegamag + corrections[band]
+    elif isinstance(vegamag, list) or isinstance(vegamag, np.ndarray):
+        abmag = []
+        for entry in vegamag:
+            abmag.append(entry + corrections[band])
+    else:
+        raise ValueError
     return abmag
 
 def flux_to_abmag(flux_nu, flux_nu_zp=48.6):
