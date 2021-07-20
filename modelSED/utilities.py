@@ -189,7 +189,13 @@ def magnitude_in_band(band: str, spectrum):
     return mag
 
 
-def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float):
+def calculate_luminosity(
+    spectrum,
+    wl_min: float,
+    wl_max: float,
+    redshift: float,
+    cosmo: str = "planck18",
+):
     """ """
     # First we redshift the spectrum
     spectrum.z = redshift
@@ -204,6 +210,14 @@ def calculate_luminosity(spectrum, wl_min: float, wl_max: float, redshift: float
     cut_wl = np.ma.compressed(masked_wl) * u.AA
     cut_flux = np.ma.compressed(np.ma.masked_where(mask, full_flux)) * FNU
     cut_freq = const.c.value / (cut_wl * 1e-10) * u.Hz * u.AA
+
+    if cosmo == "planck18":
+        from astropy.cosmology import Planck18 as cosmo  
+    elif cosmo == "planck15":
+        from astropy.cosmology import Planck15 as cosmo
+    elif cosmo == "generic":
+        from astropy.cosmology import FlatLambdaCDM
+        cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.cm)
@@ -223,9 +237,20 @@ def calculate_bolometric_luminosity(
     redshift: float,
     temperature_err: float = None,
     scale_err: float = None,
+    cosmo: str = "planck18",
 ):
     """ """
+    if cosmo == "planck18":
+        from astropy.cosmology import Planck18 as cosmo
+        
+    elif cosmo == "planck15":
+        from astropy.cosmology import Planck15 as cosmo
+    elif cosmo == "generic":
+        from astropy.cosmology import FlatLambdaCDM
+        cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+
     d = cosmo.luminosity_distance(redshift)
+
     d = d.to(u.m)
 
     radius_m = np.sqrt(d ** 2 / scale) / np.sqrt(np.pi)
