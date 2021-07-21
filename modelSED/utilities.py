@@ -8,7 +8,6 @@ import astropy.units as u
 from astropy import constants as const
 import sncosmo
 from extinction import ccm89, apply, remove, calzetti00
-from astropy.cosmology import Planck15 as cosmo
 from astropy.modeling.models import BlackBody
 from . import sncosmo_spectral_v13
 
@@ -85,11 +84,19 @@ def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
         sigma_f = np.sqrt(del_f ** 2 * (abmag_err + magzp_err) ** 2)
     return sigma_f
 
-def mag_to_absmag(magnitude, z):
+def mag_to_absmag(magnitude, z: float, cosmo: str = "generic"):
     """
     Convert apparent magnitude to absolute magnitude
     based on redshift z 
     """
+    if cosmo == "planck18":
+        from astropy.cosmology import Planck18 as cosmo  
+    elif cosmo == "planck15":
+        from astropy.cosmology import Planck15 as cosmo
+    elif cosmo == "generic":
+        from astropy.cosmology import FlatLambdaCDM
+        cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+
     luminosity_distance = cosmo.luminosity_distance(z).to(u.pc)
     distance_modulus = 5*np.log10(luminosity_distance.value) - 5
     absolute_magnitude = magnitude - distance_modulus
@@ -194,7 +201,7 @@ def calculate_luminosity(
     wl_min: float,
     wl_max: float,
     redshift: float,
-    cosmo: str = "planck18",
+    cosmo: str = "generic",
 ):
     """ """
     # First we redshift the spectrum
@@ -237,7 +244,7 @@ def calculate_bolometric_luminosity(
     redshift: float,
     temperature_err: float = None,
     scale_err: float = None,
-    cosmo: str = "planck18",
+    cosmo: str = "generic",
 ):
     """ """
     if cosmo == "planck18":
@@ -311,6 +318,7 @@ def powerlaw_spectrum(
     redshift: float = None,
     extinction_av: float = None,
     extinction_rv: float = None,
+    cosmo: str = "generic",
 ):
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
@@ -337,6 +345,14 @@ def powerlaw_spectrum(
         )
 
     if redshift is not None:
+        if cosmo == "planck18":
+            from astropy.cosmology import Planck18 as cosmo  
+        elif cosmo == "planck15":
+            from astropy.cosmology import Planck15 as cosmo
+        elif cosmo == "generic":
+            from astropy.cosmology import FlatLambdaCDM
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+
         spectrum_unreddened.z = 0
         spectrum_unreddened_redshifted = spectrum_unreddened.redshifted_to(
             redshift, cosmo=cosmo
@@ -357,6 +373,7 @@ def broken_powerlaw_spectrum(
     redshift: float = None,
     extinction_av: float = None,
     extinction_rv: float = None,
+    cosmo: str = "generic",
 ):
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
@@ -397,6 +414,15 @@ def broken_powerlaw_spectrum(
         )
 
     if redshift is not None:
+
+        if cosmo == "planck18":
+            from astropy.cosmology import Planck18 as cosmo  
+        elif cosmo == "planck15":
+            from astropy.cosmology import Planck15 as cosmo
+        elif cosmo == "generic":
+            from astropy.cosmology import FlatLambdaCDM
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+
         spectrum_unreddened.z = 0
         spectrum_unreddened_redshifted = spectrum_unreddened.redshifted_to(
             redshift, cosmo=cosmo
@@ -433,6 +459,7 @@ def blackbody_spectrum(
     extinction_av: float = None,
     extinction_rv: float = None,
     get_bolometric_flux: bool = False,
+    cosmo: str = "generic",
 ):
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
@@ -461,6 +488,15 @@ def blackbody_spectrum(
     )
 
     if redshift is not None:
+
+        if cosmo == "planck18":
+            from astropy.cosmology import Planck18 as cosmo  
+        elif cosmo == "planck15":
+            from astropy.cosmology import Planck15 as cosmo
+        elif cosmo == "generic":
+            from astropy.cosmology import FlatLambdaCDM
+            cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+        
         if extinction_av is not None:
             spectrum_reddened.z = 0
             spectrum_reddened_redshifted = spectrum_reddened.redshifted_to(
