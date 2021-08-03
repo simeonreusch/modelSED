@@ -30,7 +30,10 @@ def wise_vega_to_ab(vegamag, band):
     return abmag
 
 def p200_vega_to_ab(vegamag, band):
-    corrections = {"P200+J": 0.91, "P200+H": 1.39, "P200+Ks": 1.85}
+    if "P200" in band:
+        corrections = {"P200+J": 0.91, "P200+H": 1.39, "P200+Ks": 1.85}
+    else:
+        corrections = {"J": 0.91, "H": 1.39, "Ks": 1.85}
     if isinstance(vegamag, float):
         abmag = vegamag + corrections[band]
     elif isinstance(vegamag, list) or isinstance(vegamag, np.ndarray):
