@@ -1,16 +1,16 @@
 {
-    "P48+ZTF_g": "g",
-    "P48+ZTF_r": "r",
+    "WISE+W2": "darkgray",
+    "WISE+W1": "dimgray",
+    "P200+Ks": "black",
+    "P200+H": "saddlebrown",
+    "P200+J": "peru",
     "P48+ZTF_i": "orange",
+    "P48+ZTF_r": "r",
+    "P48+ZTF_g": "g",
     "Swift+V": "limegreen",
     "Swift+B": "blue",
     "Swift+U": "purple",
     "Swift+UVW1": "orchid",
     "Swift+UVM2": "darkblue",
-    "Swift+UVW2": "black",
-    "P200+J": "black",
-    "P200+H": "gray",
-    "P200+Ks": "blue",
-    "WISE+W1": "tab:blue",
-    "WISE+W2": "tab:red"
+    "Swift+UVW2": "black"
 }
