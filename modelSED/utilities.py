@@ -17,6 +17,24 @@ FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
 
+def load_info_json(filename: str):
+    with open(os.path.join(INSTRUMENT_DATA_DIR, filename + ".json")) as json_file:
+        outfile = json.load(json_file)
+    return outfile
+
+bandpassfiles = load_info_json("bandpassfiles")
+zpbandfluxnames = load_info_json("zpbandfluxnames")
+additional_bands = load_info_json("additional_bands")
+
+for bandname in additional_bands.keys():
+    fname = additional_bands[bandname]
+    b = np.loadtxt(os.path.join(CURRENT_FILE_DIR, fname))
+    if "Swift" in fname:
+        bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1] / 50, name=bandname)
+    else:
+        bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1], name=bandname)
+    sncosmo.registry.register(bandpass, force=True)
+
 def wise_vega_to_ab(vegamag, band):
     corrections = {"W1": 2.699, "W2": 3.339, "W3": 5.174, "W4": 6.620}
     if isinstance(vegamag, float):
@@ -169,15 +187,11 @@ def ev_to_lambda(ev):
     return lam
 
 
-def magnitude_in_band(band: str, spectrum):
+def magnitude_in_band(band: str, spectrum, flux=False):
     """ """
     bandpassfiles = load_info_json("bandpassfiles")
     zpbandfluxnames = load_info_json("zpbandfluxnames")
     additional_bands = load_info_json("additional_bands")
-
-    # for bandpassfile in bandpassfiles:
-    #     full_path_file = os.path.join(CURRENT_FILE_DIR, bandpassfile)
-    #     bandpassfiles.update(bandpassfile: full_path_file)
 
     for bandname in additional_bands.keys():
         fname = additional_bands[bandname]
@@ -188,15 +202,28 @@ def magnitude_in_band(band: str, spectrum):
             bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1], name=bandname)
         sncosmo.registry.register(bandpass, force=True)
 
-    bp = sncosmo_spectral_v13.read_bandpass(
-        os.path.join(CURRENT_FILE_DIR, bandpassfiles[band])
-    )
-    ab = sncosmo.get_magsystem("ab")
-    zp_flux = ab.zpbandflux(zpbandfluxnames[band])
-    bandflux = spectrum.bandflux(bp) / zp_flux
-    mag = -2.5 * np.log10(bandflux)
 
-    return mag
+    if zpbandfluxnames[band] in ["ztfg", "ztfr", "ztfi"]:
+        spec2 = sncosmo.Spectrum(wave=spectrum.wave, flux=spectrum.flux, unit=FNU)
+        ab = sncosmo.get_magsystem("ab")
+        zp_flux = ab.zpbandflux(zpbandfluxnames[band])
+        bandflux = spec2.bandflux(zpbandfluxnames[band]) / zp_flux
+        mag = -2.5 * np.log10(bandflux) 
+
+    else:
+        bp = sncosmo_spectral_v13.read_bandpass(
+            os.path.join(CURRENT_FILE_DIR, bandpassfiles[band])
+        )
+        ab = sncosmo.get_magsystem("ab")
+        zp_flux = ab.zpbandflux(zpbandfluxnames[band])
+
+        bandflux = spectrum.bandflux(bp) / zp_flux
+        mag = -2.5 * np.log10(bandflux)
+
+    if flux:
+        return bandflux
+    else:
+        return mag
 
 
 def calculate_luminosity(
@@ -247,6 +274,7 @@ def calculate_bolometric_luminosity(
     redshift: float,
     temperature_err: float = None,
     scale_err: float = None,
+    corrcoeff: float = None,
     cosmo: str = "generic",
 ):
     """ """
@@ -255,12 +283,12 @@ def calculate_bolometric_luminosity(
         
     elif cosmo == "planck15":
         from astropy.cosmology import Planck15 as cosmo
+
     elif cosmo == "generic":
         from astropy.cosmology import FlatLambdaCDM
         cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     d = cosmo.luminosity_distance(redshift)
-
     d = d.to(u.m)
 
     radius_m = np.sqrt(d ** 2 / scale) / np.sqrt(np.pi)
@@ -271,48 +299,32 @@ def calculate_bolometric_luminosity(
     luminosity_watt = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * (radius_m ** 2)
     luminosity = luminosity_watt.to(u.erg / u.s)
 
-    # calculate errors
-    if scale_err is not None:
-        radius_m_err = np.sqrt(d**2/( np.pi * scale**3 ) ) / 2 * scale_err
-        # radius_m_err = np.sqrt((d ** 2 / (4 * scale ** 3)) * scale_err ** 2) / np.sqrt(np.pi)
-        radius_cm_err = radius_m_err * (100 * u.cm) / u.m
-    else:
-        radius_m_err = None
-        radius_cm_err = None
+    LW = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * ( (d**2/scale)/np.pi )
+    L = LW.to(u.erg/u.s)
 
-    if temperature_err is not None:
-        del_luminosity_T = (
-            16 * np.pi * const.sigma_sb * radius_m ** 2 * (temperature) ** 3
-        )
+
+    del_L_del_T = (16 * const.sigma_sb * temperature**3 * d**2 ) / scale
+    
+    del_L_del_s = (-4 * const.sigma_sb * d**2 * temperature**4) / scale**2
+
+    # calculate errors
+    if scale_err is not None and temperature_err is not None:
+        radius_m_err = np.sqrt(d**2/( np.pi * scale**3 ) ) / 2 * scale_err
+        radius_cm_err = radius_m_err * (100 * u.cm) / u.m
         temperature_err = temperature_err * u.K
 
-    if radius_m_err is not None:
-        del_luminosity_r = (
-            8 * np.pi * const.sigma_sb * (temperature) ** 4 * radius_m_err
+        L_err_watt = np.sqrt(
+            (del_L_del_T**2 * temperature_err**2)
+            + (del_L_del_s**2 * scale_err**2)
+            + 2 * (del_L_del_T * del_L_del_s * corrcoeff * scale_err * temperature_err)
         )
 
-    if temperature_err is not None and radius_m_err is not None:
-        luminosity_err_watt = np.sqrt(
-            (del_luminosity_T ** 2 * (temperature_err) ** 2)
-            + (del_luminosity_r ** 2 * radius_m_err ** 2)
-        )
-        # print("temp and radius error given")
-    elif temperature_err is not None and radius_m_err is None:
-        luminosity_err_watt = np.sqrt((del_luminosity_T ** 2 * (temperature_err) ** 2))
-        # print("temp error given")
-    elif temperature_err is None and radius_m_err is not None:
-        luminosity_err_watt = np.sqrt((del_luminosity_r ** 2 * radius_m_err ** 2))
-        # print("radius error given")
-    else:
-        luminosity_err_watt = None
-        # print("no error given")
+        L_err = L_err_watt.to(u.erg / u.s)
 
-    if luminosity_err_watt is not None:
-        luminosity_err = luminosity_err_watt.to(u.erg / u.s)
-    else:
-        luminosity_err = None
+        return L, L_err, radius_cm, radius_cm_err
 
-    return luminosity, luminosity_err, radius_cm, radius_cm_err
+    else:
+        return L, radius_cm
 
 
 def powerlaw_spectrum(
@@ -531,7 +543,4 @@ def get_wavelengths_and_frequencies():
     return wavelengths, frequencies
 
 
-def load_info_json(filename: str):
-    with open(os.path.join(INSTRUMENT_DATA_DIR, filename + ".json")) as json_file:
-        outfile = json.load(json_file)
-    return outfile
+
