@@ -11,16 +11,18 @@ from extinction import ccm89, apply, remove, calzetti00
 from astropy.modeling.models import BlackBody
 from . import sncosmo_spectral_v13
 
-FNU = u.erg / (u.cm ** 2 * u.s * u.Hz)
-FLAM = u.erg / (u.cm ** 2 * u.s * u.AA)
+FNU = u.erg / (u.cm**2 * u.s * u.Hz)
+FLAM = u.erg / (u.cm**2 * u.s * u.AA)
 
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 INSTRUMENT_DATA_DIR = os.path.abspath(os.path.join(CURRENT_FILE_DIR, "instrument_data"))
+
 
 def load_info_json(filename: str):
     with open(os.path.join(INSTRUMENT_DATA_DIR, filename + ".json")) as json_file:
         outfile = json.load(json_file)
     return outfile
+
 
 bandpassfiles = load_info_json("bandpassfiles")
 zpbandfluxnames = load_info_json("zpbandfluxnames")
@@ -35,6 +37,7 @@ for bandname in additional_bands.keys():
         bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1], name=bandname)
     sncosmo.registry.register(bandpass, force=True)
 
+
 def wise_vega_to_ab(vegamag, band):
     corrections = {"W1": 2.699, "W2": 3.339, "W3": 5.174, "W4": 6.620}
     if isinstance(vegamag, float):
@@ -46,6 +49,7 @@ def wise_vega_to_ab(vegamag, band):
     else:
         raise ValueError
     return abmag
+
 
 def p200_vega_to_ab(vegamag, band):
     if "P200" in band:
@@ -61,6 +65,7 @@ def p200_vega_to_ab(vegamag, band):
     else:
         raise ValueError
     return abmag
+
 
 def flux_to_abmag(flux_nu, flux_nu_zp=48.6):
     flux_nu = np.asarray(flux_nu, dtype=float)
@@ -80,8 +85,8 @@ def abmag_to_flux(abmag, magzp=48.6):
 
 
 def flux_density_to_flux(wl, flux_density, flux_density_err=None):
-    """ Convert flux density in erg/s cm^2 for given wavelength
-        in Angstrom
+    """Convert flux density in erg/s cm^2 for given wavelength
+    in Angstrom
     """
     nu = const.c.to("Angstrom/s").value / (wl)
     flux = flux_density * nu
@@ -102,27 +107,30 @@ def abmag_err_to_flux_err(abmag, abmag_err, magzp=None, magzp_err=None):
         sigma_f = 3.39059e-20 * np.exp(-0.921034 * abmag) * abmag_err
     else:
         del_f = 0.921034 * np.exp(0.921034 * (magzp - abmag))
-        sigma_f = np.sqrt(del_f ** 2 * (abmag_err + magzp_err) ** 2)
+        sigma_f = np.sqrt(del_f**2 * (abmag_err + magzp_err) ** 2)
     return sigma_f
+
 
 def mag_to_absmag(magnitude, z: float, cosmo: str = "generic"):
     """
     Convert apparent magnitude to absolute magnitude
-    based on redshift z 
+    based on redshift z
     """
     if cosmo == "planck18":
-        from astropy.cosmology import Planck18 as cosmo  
+        from astropy.cosmology import Planck18 as cosmo
     elif cosmo == "planck15":
         from astropy.cosmology import Planck15 as cosmo
     elif cosmo == "generic":
         from astropy.cosmology import FlatLambdaCDM
+
         cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     luminosity_distance = cosmo.luminosity_distance(z).to(u.pc)
-    distance_modulus = 5*np.log10(luminosity_distance.value) - 5
+    distance_modulus = 5 * np.log10(luminosity_distance.value) - 5
     absolute_magnitude = magnitude - distance_modulus
-    
+
     return absolute_magnitude
+
 
 def lambda_to_nu(wavelength):
     """
@@ -202,13 +210,12 @@ def magnitude_in_band(band: str, spectrum, flux=False):
             bandpass = sncosmo.Bandpass(b[:, 0], b[:, 1], name=bandname)
         sncosmo.registry.register(bandpass, force=True)
 
-
     if zpbandfluxnames[band] in ["ztfg", "ztfr", "ztfi"]:
         spec2 = sncosmo.Spectrum(wave=spectrum.wave, flux=spectrum.flux, unit=FNU)
         ab = sncosmo.get_magsystem("ab")
         zp_flux = ab.zpbandflux(zpbandfluxnames[band])
         bandflux = spec2.bandflux(zpbandfluxnames[band]) / zp_flux
-        mag = -2.5 * np.log10(bandflux) 
+        mag = -2.5 * np.log10(bandflux)
 
     else:
         bp = sncosmo_spectral_v13.read_bandpass(
@@ -249,20 +256,21 @@ def calculate_luminosity(
     cut_freq = const.c.value / (cut_wl * 1e-10) * u.Hz * u.AA
 
     if cosmo == "planck18":
-        from astropy.cosmology import Planck18 as cosmo  
+        from astropy.cosmology import Planck18 as cosmo
     elif cosmo == "planck15":
         from astropy.cosmology import Planck15 as cosmo
     elif cosmo == "generic":
         from astropy.cosmology import FlatLambdaCDM
+
         cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.cm)
 
-    flux = np.trapz(cut_flux, cut_freq)# * u.erg / u.cm ** 2 / u.s
+    flux = np.trapz(cut_flux, cut_freq)  # * u.erg / u.cm ** 2 / u.s
 
     print(f"integrated flux: {np.abs(flux):.2e}")
-    luminosity = np.abs(flux * 4 * np.pi * d ** 2)
+    luminosity = np.abs(flux * 4 * np.pi * d**2)
     print(f"luminosity: {luminosity:.2e}")
 
     return luminosity
@@ -280,36 +288,36 @@ def calculate_bolometric_luminosity(
     """ """
     if cosmo == "planck18":
         from astropy.cosmology import Planck18 as cosmo
-        
+
     elif cosmo == "planck15":
         from astropy.cosmology import Planck15 as cosmo
 
     elif cosmo == "generic":
         from astropy.cosmology import FlatLambdaCDM
+
         cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
     d = cosmo.luminosity_distance(redshift)
     d = d.to(u.m)
 
-    radius_m = np.sqrt(d ** 2 / scale) / np.sqrt(np.pi)
-    radius_cm = np.sqrt(d ** 2 / scale) * (100 * u.cm) / u.m / np.sqrt(np.pi)
+    radius_m = np.sqrt(d**2 / scale) / np.sqrt(np.pi)
+    radius_cm = np.sqrt(d**2 / scale) * (100 * u.cm) / u.m / np.sqrt(np.pi)
 
     temperature = temperature * u.K
 
-    luminosity_watt = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * (radius_m ** 2)
+    luminosity_watt = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * (radius_m**2)
     luminosity = luminosity_watt.to(u.erg / u.s)
 
-    LW = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * ( (d**2/scale)/np.pi )
-    L = LW.to(u.erg/u.s)
+    LW = const.sigma_sb * (temperature) ** 4 * 4 * np.pi * ((d**2 / scale) / np.pi)
+    L = LW.to(u.erg / u.s)
 
+    del_L_del_T = (16 * const.sigma_sb * temperature**3 * d**2) / scale
 
-    del_L_del_T = (16 * const.sigma_sb * temperature**3 * d**2 ) / scale
-    
     del_L_del_s = (-4 * const.sigma_sb * d**2 * temperature**4) / scale**2
 
     # calculate errors
     if scale_err is not None and temperature_err is not None:
-        radius_m_err = np.sqrt(d**2/( np.pi * scale**3 ) ) / 2 * scale_err
+        radius_m_err = np.sqrt(d**2 / (np.pi * scale**3)) / 2 * scale_err
         radius_cm_err = radius_m_err * (100 * u.cm) / u.m
         temperature_err = temperature_err * u.K
 
@@ -338,9 +346,9 @@ def powerlaw_spectrum(
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
     if scale is None:
-        flux_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s
+        flux_nu = frequencies**alpha * u.erg / u.cm**2 / u.s
     else:
-        flux_nu = frequencies ** alpha * u.erg / u.cm ** 2 / u.s * scale
+        flux_nu = frequencies**alpha * u.erg / u.cm**2 / u.s * scale
 
     flux_lambda = flux_nu_to_lambda(flux_nu, wavelengths)
 
@@ -361,11 +369,12 @@ def powerlaw_spectrum(
 
     if redshift is not None:
         if cosmo == "planck18":
-            from astropy.cosmology import Planck18 as cosmo  
+            from astropy.cosmology import Planck18 as cosmo
         elif cosmo == "planck15":
             from astropy.cosmology import Planck15 as cosmo
         elif cosmo == "generic":
             from astropy.cosmology import FlatLambdaCDM
+
             cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
         spectrum_unreddened.z = 0
@@ -394,17 +403,17 @@ def broken_powerlaw_spectrum(
     wavelengths, frequencies = get_wavelengths_and_frequencies()
 
     if scale1 is None:
-        flux_nu1 = frequencies.value ** alpha1 * u.erg / u.cm ** 2 / u.s / u.Hz
+        flux_nu1 = frequencies.value**alpha1 * u.erg / u.cm**2 / u.s / u.Hz
     else:
         flux_nu1 = (
-            frequencies.value ** alpha1 * scale1 * (u.erg / u.cm ** 2 / u.s / u.Hz)
+            frequencies.value**alpha1 * scale1 * (u.erg / u.cm**2 / u.s / u.Hz)
         )
 
     if scale2 is None:
-        flux_nu2 = frequencies.value ** alpha2 * u.erg / u.cm ** 2 / u.s / u.Hz
+        flux_nu2 = frequencies.value**alpha2 * u.erg / u.cm**2 / u.s / u.Hz
     else:
         flux_nu2 = (
-            frequencies.value ** alpha2 * scale2 * (u.erg / u.cm ** 2 / u.s / u.Hz)
+            frequencies.value**alpha2 * scale2 * (u.erg / u.cm**2 / u.s / u.Hz)
         )
 
     flux_lambda1 = flux_nu_to_lambda(flux_nu1, wavelengths)
@@ -431,11 +440,12 @@ def broken_powerlaw_spectrum(
     if redshift is not None:
 
         if cosmo == "planck18":
-            from astropy.cosmology import Planck18 as cosmo  
+            from astropy.cosmology import Planck18 as cosmo
         elif cosmo == "planck15":
             from astropy.cosmology import Planck15 as cosmo
         elif cosmo == "generic":
             from astropy.cosmology import FlatLambdaCDM
+
             cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
         spectrum_unreddened.z = 0
@@ -454,12 +464,12 @@ def powerlaw_error_prop(
     frequency, alpha, alpha_err, scale, scale_err, nu_or_lambda: str = "nu"
 ):
     """ """
-    nu = frequency ** alpha * scale
-    first_term = (nu * np.log(frequency)) ** 2 * alpha_err ** 2
-    second_term = (frequency ** alpha) ** 2 * scale_err ** 2
+    nu = frequency**alpha * scale
+    first_term = (nu * np.log(frequency)) ** 2 * alpha_err**2
+    second_term = (frequency**alpha) ** 2 * scale_err**2
     flux_err = np.sqrt(first_term + second_term)
     if nu_or_lambda == "nu":
-        return flux_err * u.erg / u.cm ** 2 * u.Hz / u.s
+        return flux_err * u.erg / u.cm**2 * u.Hz / u.s
     elif nu_or_lambda == "lambda":
         print("OOOPS, NOT IMPLEMENTED YET")
         return 0
@@ -479,13 +489,12 @@ def blackbody_spectrum(
     """ """
     wavelengths, frequencies = get_wavelengths_and_frequencies()
     scale_lambda = 1 * FLAM / u.sr
-    scale_lambda = 1/scale * FLAM / u.sr
-    scale_nu = 1/scale * FNU / u.sr
-
+    scale_lambda = 1 / scale * FLAM / u.sr
+    scale_nu = 1 / scale * FNU / u.sr
 
     bb_nu = BlackBody(temperature=temperature * u.K, scale=scale_nu)
     flux_nu = bb_nu(wavelengths) * u.sr
-    bolometric_flux = bb_nu.bolometric_flux#.value
+    bolometric_flux = bb_nu.bolometric_flux  # .value
 
     flux_lambda = flux_nu_to_lambda(flux_nu, wavelengths)
 
@@ -505,17 +514,19 @@ def blackbody_spectrum(
     if redshift is not None:
 
         if cosmo == "planck18":
-            from astropy.cosmology import Planck18 as cosmo  
+            from astropy.cosmology import Planck18 as cosmo
         elif cosmo == "planck15":
             from astropy.cosmology import Planck15 as cosmo
         elif cosmo == "generic":
             from astropy.cosmology import FlatLambdaCDM
+
             cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
-        
+
         if extinction_av is not None:
             spectrum_reddened.z = 0
             spectrum_reddened_redshifted = spectrum_reddened.redshifted_to(
-                redshift, cosmo=cosmo,
+                redshift,
+                cosmo=cosmo,
             )
             outspectrum = spectrum_reddened_redshifted
         else:
@@ -541,6 +552,3 @@ def get_wavelengths_and_frequencies():
     wavelengths = np.arange(1000, 60000, 10) * u.AA
     frequencies = const.c.value / (wavelengths.value * 1e-10) * u.Hz
     return wavelengths, frequencies
-
-
-
