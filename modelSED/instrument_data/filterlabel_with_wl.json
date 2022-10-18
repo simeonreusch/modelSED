@@ -1,0 +1,16 @@
+{
+    "P48+ZTF_g": "g (472 nm)",
+    "P48+ZTF_r": "r (634 nm)",
+    "P48+ZTF_i": "i (789 nm)",
+    "Swift+V": "Swift V",
+    "Swift+UVW2": "Swift UVW2",
+    "Swift+UVW1": "UVW1 (268 nm)",
+    "Swift+UVM2": "Swift UVM2",
+    "Swift+U": "Swift U",
+    "Swift+B": "Swift B",
+    "P200+J": "J (1206 nm)",
+    "P200+H": "H (1570 nm)",
+    "P200+Ks": "Ks (2130 nm)",
+    "WISE+W1": "W1 (3353 nm)",
+    "WISE+W2": "W2 (4603 nm)"
+}
